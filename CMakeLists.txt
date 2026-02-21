@@ -4,7 +4,6 @@ project(sausages C)
 set(CMAKE_C_STANDARD 90)
 
 add_executable(sausages main.c
-        archive.c
-        archive.h)
+        archive.c)
 
 target_link_libraries(sausages GL GLU GLEW glut)
