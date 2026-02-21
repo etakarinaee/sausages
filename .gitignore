@@ -1,7 +1,2 @@
 .idea
-cmake-build-debug
 tanks
-CMakeFiles
-*.cmake
-Makefile
-CMakeCache.txt
