@@ -5,31 +5,13 @@
 #include <GL/freeglut.h>
 #include <stdlib.h>
 
+#include "archive.h"
+
+/* where the game data is stored */
+#define SAUSAGES_DATA "sausages.arc"
+
 GLuint tri_program;
 GLuint vao, vbo;
-
-char* load_shader(const char* path) {
-    FILE* file;
-    char* buf;
-    long size;
-
-    file = fopen(path, "rb");
-    if (!file) {
-        fprintf(stderr, "failed to load shader: %s\n", path);
-        return NULL;
-    }
-
-    fseek(file, 0, SEEK_END);
-    size = ftell(file);
-    rewind(file);
-
-    buf = malloc(size + 1);
-    fread(buf, 1, size, file);
-    buf[size] = '\0';
-    fclose(file);
-
-    return buf;
-}
 
 GLuint compile_shader(GLenum type, const char *s) {
     int success;
@@ -64,11 +46,20 @@ GLuint create_shader_program(void) {
     GLuint vertex_shader, fragment_shader;
     GLuint program;
     int success;
+    unsigned long len;
     /* infoLog */
     char buf[512];
+    char *tri_vertex, *tri_fragment;
     
-    char* tri_vertex = load_shader("tri.vert");
-    char* tri_fragment = load_shader("tri.frag");
+    tri_vertex = archive_read_alloc(SAUSAGES_DATA, "tri.vert", &len);
+    if (!tri_vertex) {
+        exit(1);
+    }
+
+    tri_fragment = archive_read_alloc(SAUSAGES_DATA, "tri.frag", &len);
+    if (!tri_fragment) {
+        exit(1);
+    }
 
     vertex_shader = compile_shader(GL_VERTEX_SHADER, tri_vertex);
     fragment_shader = compile_shader(GL_FRAGMENT_SHADER, tri_fragment);
@@ -118,6 +109,15 @@ void reshape(int w, int h) {
 
 int main(int argc, char **argv) {
     GLenum err;
+    FILE *test;
+
+    /* check for game data before doing anything */
+    test = fopen(SAUSAGES_DATA, "rb");
+    if (!test) {
+        fprintf(stderr, "game data not available\n");
+        return 1;
+    }
+    fclose(test);
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);

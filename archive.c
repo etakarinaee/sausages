@@ -79,6 +79,8 @@ int archive_create(const char *name, char **argv, const int n) {
 
     /* measure each file and build dirs only in memory yet */
     for (i = 0; i < n; i++) {
+        const char *base;
+
         in = fopen(argv[i], "rb");
         if (!in) {
             perror(argv[i]);
@@ -88,7 +90,11 @@ int archive_create(const char *name, char **argv, const int n) {
             return -1;
         }
 
-        strncpy(dir[i].name, argv[i], ARCHIVE_NAMELEN - 1);
+        /* store only the filename, not the full path */
+        base = strrchr(argv[i], '/');
+        base = base ? base + 1 : argv[i];
+
+        strncpy(dir[i].name, base, ARCHIVE_NAMELEN - 1);
         dir[i].size = fsize(in);
         dir[i].offset = offset;
         offset += dir[i].size;
@@ -243,7 +249,7 @@ void *archive_read_alloc(const char *name, const char *file, unsigned long *len)
         e.size = get32(f);
 
         if (strcmp(e.name, file) == 0) {
-            buf = malloc(e.size);
+            buf = malloc(e.size + 1);
             if (!buf) {
                 fprintf(stderr, "out of memory\n");
                 fclose(f);
@@ -253,7 +259,7 @@ void *archive_read_alloc(const char *name, const char *file, unsigned long *len)
 
             fseek(f, e.offset, SEEK_SET);
             fread(buf, 1, e.size, f);
-            ((char *)buf)[e.size] = '\0';
+            ((char *) buf)[e.size] = '\0';
 
             fclose(f);
             *len = e.size;
@@ -262,7 +268,7 @@ void *archive_read_alloc(const char *name, const char *file, unsigned long *len)
         }
     }
 
-    fprintf(stderr, "%s: no entry '%s'", name, file);
+    fprintf(stderr, "%s: no entry '%s'\n", name, file);
     fclose(f);
 
     return NULL;
