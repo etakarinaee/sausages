@@ -5,35 +5,17 @@
 #include <GL/freeglut.h>
 #include <stdlib.h>
 
+#include "archive.h"
+
+/* where the game data is stored */
+#define SAUSAGES_DATA "sausages.arc"
+
 GLuint tri_program;
 GLuint vao, vbo;
 
-char* load_shader(const char* path) {
-    FILE* file;
-    char* buf;
-    long size;
-
-    file = fopen(path, "rb");
-    if (!file) {
-        fprintf(stderr, "failed to load shader: %s\n", path);
-        return NULL;
-    }
-
-    fseek(file, 0, SEEK_END);
-    size = ftell(file);
-    rewind(file);
-
-    buf = malloc(size + 1);
-    fread(buf, 1, size, file);
-    buf[size] = '\0';
-    fclose(file);
-
-    return buf;
-}
-
 GLuint compile_shader(GLenum type, const char *s) {
     int success;
-    // infoLog
+    /* infoLog */
     char buf[512];
     GLuint shader;
 
@@ -64,11 +46,20 @@ GLuint create_shader_program(void) {
     GLuint vertex_shader, fragment_shader;
     GLuint program;
     int success;
-    // infoLog
+    unsigned long len;
+    /* infoLog */
     char buf[512];
+    char *tri_vertex, *tri_fragment;
     
-    char* tri_vertex = load_shader("tri.vert");
-    char* tri_fragment = load_shader("tri.frag");
+    tri_vertex = archive_read_alloc(SAUSAGES_DATA, "tri.vert", &len);
+    if (!tri_vertex) {
+        exit(1);
+    }
+
+    tri_fragment = archive_read_alloc(SAUSAGES_DATA, "tri.frag", &len);
+    if (!tri_fragment) {
+        exit(1);
+    }
 
     vertex_shader = compile_shader(GL_VERTEX_SHADER, tri_vertex);
     fragment_shader = compile_shader(GL_FRAGMENT_SHADER, tri_fragment);
@@ -118,21 +109,30 @@ void reshape(int w, int h) {
 
 int main(int argc, char **argv) {
     GLenum err;
+    FILE *test;
+
+    /* check for game data before doing anything */
+    test = fopen(SAUSAGES_DATA, "rb");
+    if (!test) {
+        fprintf(stderr, "game data not available\n");
+        return 1;
+    }
+    fclose(test);
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
     glutInitWindowSize(1280, 720);
-    glutCreateWindow("Tanks");
+    glutCreateWindow("Sausages");
 
     glewExperimental = true;
     err = glewInit();
     if (err != GLEW_OK) {
-        // TODO: Cannot print value of type const GLubyte * that implies specifier %p with format specifier %s that implies type const char *
+        /* TODO: Cannot print value of type const GLubyte * that implies specifier %p with format specifier %s that implies type const char * */
         fprintf(stderr, "glewInit: %s\n", glewGetErrorString(err));
         return -1;
     }
 
-    // TODO: Cannot print value of type const GLubyte * that implies specifier %p with format specifier %s that implies type const char *
+    /* TODO: Cannot print value of type const GLubyte * that implies specifier %p with format specifier %s that implies type const char * */
     printf("OpenGL %s\n", glGetString(GL_VERSION));
 
     glClearColor(0.f, 0.f, 0.f, 0.f);
@@ -152,13 +152,13 @@ int main(int argc, char **argv) {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
 
-    // TODO: make this more readable
+    /* TODO: make this more readable */
 
-    // position at location 0
+    /* position at location 0 */
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // color at location 1
+    /* color at location 1 */
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
