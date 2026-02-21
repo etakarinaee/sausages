@@ -4,3 +4,4 @@ tanks
 CMakeFiles
 *.cmake
 Makefile
+CMakeCache.txt
