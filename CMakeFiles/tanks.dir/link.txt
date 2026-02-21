@@ -1,1 +1,0 @@
-/usr/bin/cc -Wl,--dependency-file=CMakeFiles/tanks.dir/link.d CMakeFiles/tanks.dir/main.c.o -o tanks  -lGL -lGLU -lGLEW -lglut
