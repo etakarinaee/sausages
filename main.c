@@ -60,6 +60,7 @@ int main() {
         glfwPollEvents();
     }
 
+    renderer_deinit(&ctx);
     glfwTerminate();
 
     return 0;

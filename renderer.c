@@ -137,6 +137,10 @@ int renderer_init(struct render_context* ctx) {
     return 0;
 }
 
+void renderer_deinit(struct render_context *ctx) {
+    if (ctx->quads) free(ctx->quads);
+}
+
 void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale, float rotation) {
     struct quad_data data;
 

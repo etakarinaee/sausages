@@ -34,6 +34,7 @@ struct render_context {
 };
 
 int renderer_init(struct render_context* ctx);
+void renderer_deinit(struct render_context* ctx);
 void renderer_push_quad(struct render_context* ctx, struct vec2, float scale, float rotation);
 void renderer_draw(struct render_context* ctx);
 
