@@ -32,7 +32,7 @@ int main() {
     glfwSetFramebufferSizeCallback(window, resize_callback);
     glfwSetWindowUserPointer(window, &ctx);
 
-    init_renderer(&ctx);
+    renderer_init(&ctx);
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
