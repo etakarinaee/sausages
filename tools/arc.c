@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-#include "../archive.h"
+#include "../core_archive.h"
 
 int main(int argc, char **argv) {
     if (argc < 3) {

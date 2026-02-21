@@ -5,7 +5,7 @@
 #include <GL/freeglut.h>
 #include <stdlib.h>
 
-#include "archive.h"
+#include "core_archive.h"
 
 /* where the game data is stored */
 #define SAUSAGES_DATA "sausages.arc"
