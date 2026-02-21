@@ -127,10 +127,48 @@ static int program_init(struct render_context* ctx) {
 int renderer_init(struct render_context* ctx) {
     buffers_init(ctx);
     program_init(ctx);
+
+    /* TODO: replace with actualy dym array */
+    ctx->quads = calloc(2, sizeof(struct quad_data));
+    ctx->quads_count = 0;
+    ctx->quads_capacity = 2;
+
     return 0;
 }
 
-void renderer_push_quad(struct render_context *ctx, struct vec2, float scale, float rotation) {
+void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale, float rotation) {
+    struct quad_data data;
 
+    /* TODO: error checking etc.. */
+    if (ctx->quads_count + 1 > ctx->quads_capacity) {
+        if (ctx->quads_capacity == 0) {
+            ctx->quads_capacity = 2;
+        } 
+        else {
+            ctx->quads_capacity *= 2;
+        }
+
+        ctx->quads = realloc(ctx->quads, ctx->quads_capacity * sizeof(struct quad_data));
+    }
+    ctx->quads_count++;
+
+    data.pos = pos;
+    data.scale = scale;
+    data.rotation = rotation;
+
+    ctx->quads[ctx->quads_count - 1] = data;
 }
+
+void renderer_draw(struct render_context *ctx) {
+    int i;
+
+    glUseProgram(ctx->program);
+    glBindVertexArray(ctx->vao);
+
+    for (i = 0; i < ctx->quads_count; i++) {
+        /* TODO: add the transforms to the quads */
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    }
+}
+
 

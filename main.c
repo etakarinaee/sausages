@@ -37,6 +37,15 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+            double x;
+            double y;
+            glfwGetCursorPos(window, &x, &y);
+            renderer_push_quad(&ctx, (struct vec2){x, y}, 1.0f, 0.0f);
+        }
+
+        renderer_draw(&ctx);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
