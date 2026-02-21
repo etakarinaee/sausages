@@ -49,7 +49,7 @@ int main() {
             */
             pos = (struct vec2){ (x / ctx.width) * 2.0f - 1.0f, -((y / ctx.height) * 2.0f - 1.0f) };
 
-            //printf("X: %f Y: %f\n", pos.x, pos.y);
+            /* printf("X: %f Y: %f\n", pos.x, pos.y); */
 
             renderer_push_quad(&ctx, pos, 1.0f, 0.0f);
         }
