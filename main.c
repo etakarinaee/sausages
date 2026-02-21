@@ -43,6 +43,10 @@ int main() {
             double y;
             glfwGetCursorPos(window, &x, &y);
             struct vec2 pos;
+
+            /* convert mouse pos from window coords to 0 to 1 by dividing with width 
+                than convert to -1 to 1 by multiply 2 and then subtract -1
+            */
             pos = (struct vec2){ (x / ctx.width) * 2.0f - 1.0f, -((y / ctx.height) * 2.0f - 1.0f) };
 
             //printf("X: %f Y: %f\n", pos.x, pos.y);
