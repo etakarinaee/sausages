@@ -7,8 +7,4 @@ add_executable(sausages main.c
         archive.c
         archive.h)
 
-<<<<<<< Updated upstream
-target_link_libraries(tanks GL GLU GLEW glut)
-=======
 target_link_libraries(sausages GL GLU GLEW glut)
->>>>>>> Stashed changes
