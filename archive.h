@@ -26,6 +26,8 @@ struct archive_header {
 int archive_create(const char *name, char **argv, int n);
 /* list contents of archive */
 int archive_list(const char *name);
-int archive_extract(const char *name);
+int archive_extract_alloc(const char *name);
+/* returns a malloc'd buffer */
+void *archive_read_alloc(const char *name, const char *file, unsigned long *len);
 
 #endif /* ARCHIVE_H */

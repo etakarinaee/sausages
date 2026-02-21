@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
         }
 
         case 'x': {
-            return archive_extract(argv[2]) < 0;
+            return archive_extract_alloc(argv[2]) < 0;
         }
 
         default: {

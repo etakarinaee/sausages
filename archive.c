@@ -161,7 +161,7 @@ int archive_list(const char *name) {
     return 0;
 }
 
-int archive_extract(const char *name) {
+int archive_extract_alloc(const char *name) {
     FILE *f, *out;
     unsigned long magic, n, i;
     struct archive_entry *dir;
@@ -213,4 +213,57 @@ int archive_extract(const char *name) {
     fclose(f);
 
     return 0;
+}
+
+void *archive_read_alloc(const char *name, const char *file, unsigned long *len) {
+    FILE *f;
+    unsigned long magic, n, i;
+    struct archive_entry e;
+    void *buf;
+
+    f = fopen(name, "rb");
+    if (!f) {
+        perror(name);
+
+        return NULL;
+    }
+
+    magic = get32(f);
+    if (magic != ARCHIVE_MAGIC) {
+        fprintf(stderr, "%s: not a valid archive\n", name);
+        fclose(f);
+
+        return NULL;
+    }
+
+    n = get32(f);
+    for (i = 0; i < n; i++) {
+        fread(e.name, 1, ARCHIVE_NAMELEN, f);
+        e.offset = get32(f);
+        e.size = get32(f);
+
+        if (strcmp(e.name, file) == 0) {
+            buf = malloc(e.size);
+            if (!buf) {
+                fprintf(stderr, "out of memory\n");
+                fclose(f);
+
+                return NULL;
+            }
+
+            fseek(f, e.offset, SEEK_SET);
+            fread(buf, 1, e.size, f);
+            ((char *)buf)[e.size] = '\0';
+
+            fclose(f);
+            *len = e.size;
+
+            return buf;
+        }
+    }
+
+    fprintf(stderr, "%s: no entry '%s'", name, file);
+    fclose(f);
+
+    return NULL;
 }
