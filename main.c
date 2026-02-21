@@ -44,6 +44,15 @@ int main(int argc, char **argv) {
     glutInitWindowSize(1280, 720);
     glutCreateWindow("Tanks");
 
+    glewExperimental = true;
+    const GLenum err = glewInit();
+    if (err != GLEW_OK) {
+        fprintf(stderr, "glewInit: %s\n", glewGetErrorString(err));
+        return -1;
+    }
+
+    printf("OpenGL %s\n", glGetString(GL_VERSION));
+
     glClearColor(0.f, 0.f, 0.f, 0.f);
 
     glutDisplayFunc(display);
