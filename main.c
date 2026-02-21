@@ -1,5 +1,5 @@
-#include <stdbool.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -8,23 +8,27 @@
 GLuint tri_program;
 GLuint vao, vbo;
 
-const char* load_shader(const char* path) {
-    FILE* file = fopen(path, "rb");
+char* load_shader(const char* path) {
+    FILE* file;
+    char* buf;
+    long size;
+
+    file = fopen(path, "rb");
     if (!file) {
         fprintf(stderr, "failed to load shader: %s\n", path);
         return NULL;
     }
 
     fseek(file, 0, SEEK_END);
-    int64_t size = ftell(file);
+    size = ftell(file);
     rewind(file);
 
-    char* buffer = malloc(size + 1);
-    fread(buffer, 1, size, file);
-    buffer[size] = '\0';
+    buf = malloc(size + 1);
+    fread(buf, 1, size, file);
+    buf[size] = '\0';
     fclose(file);
 
-    return buffer;
+    return buf;
 }
 
 GLuint compile_shader(GLenum type, const char *s) {
@@ -63,11 +67,8 @@ GLuint create_shader_program(void) {
     // infoLog
     char buf[512];
     
-    const char* tri_vertex = load_shader("tri.vert");
-    const char* tri_fragment = load_shader("tri.frag");
-
-    printf("%s\n", tri_vertex);
-    printf("%s\n", tri_fragment);
+    char* tri_vertex = load_shader("tri.vert");
+    char* tri_fragment = load_shader("tri.frag");
 
     vertex_shader = compile_shader(GL_VERTEX_SHADER, tri_vertex);
     fragment_shader = compile_shader(GL_FRAGMENT_SHADER, tri_fragment);
