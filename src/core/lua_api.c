@@ -20,6 +20,25 @@ static struct vec2 check_vec2(lua_State *L, int idx) {
     return v;
 }
 
+static struct color3 check_color3(lua_State *L, int idx) {
+    struct color3 c;
+    luaL_checktype(L, idx, LUA_TTABLE);
+
+    lua_rawgeti(L, idx, 1);
+    c.r = (float)luaL_checknumber(L, -1);
+    lua_pop(L, 1);
+
+    lua_rawgeti(L, idx, 2);
+    c.g = (float)luaL_checknumber(L, -1);
+    lua_pop(L, 1);
+
+    lua_rawgeti(L, idx, 3);
+    c.b = (float)luaL_checknumber(L, -1);
+    lua_pop(L, 1);
+
+    return c;
+}
+
 static int quit(lua_State *L) {
     (void) L;
     exit(0);
@@ -36,11 +55,9 @@ static int print(lua_State *L) {
 static int push_quad(lua_State *L) {
     struct color3 color;
     struct vec2 pos;
-    pos = check_vec2(L, 1);
 
-    color.r = 0.0f;
-    color.g = 0.0f;
-    color.b = 0.0f;
+    pos = check_vec2(L, 1);
+    color = check_color3(L, 2);
 
     renderer_push_quad(&ctx, pos, 1.0f, 0.0f, color);
 
