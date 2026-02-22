@@ -22,6 +22,7 @@ struct matrix {
 typedef GLint texture_id;
 
 struct quad_data {
+    texture_id tex;
     float scale;
     float rotation;
     struct vec2 pos;
@@ -35,7 +36,9 @@ struct render_context {
     GLuint vao;
     GLuint vbo;
     GLuint ebo;
-    GLuint program;
+
+    GLuint quad_program;
+    GLuint tex_program;
 
     struct quad_data *quads;
     int quads_count;
@@ -53,7 +56,7 @@ void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale
 
 void renderer_draw(struct render_context *ctx);
 
-texture_id renderer_load_texture(struct render_context* ctx, const char* path);
+texture_id renderer_load_texture(const char* path);
 
 /* Math */
 void math_matrix_identity(struct matrix *m);
