@@ -85,6 +85,12 @@ static int program_init(struct render_context* ctx) {
     /* Vertex Shader */
     vertex_str = load_shader("shaders/tri.vert");
     vertex_id = glCreateShader(GL_VERTEX_SHADER);
+
+    if (!vertex_str) {
+        error = 1;
+        goto end;
+    }
+
     glShaderSource(vertex_id, 1, (const GLchar* const*)&vertex_str, NULL);
     glCompileShader(vertex_id);
 
@@ -100,6 +106,12 @@ static int program_init(struct render_context* ctx) {
     /* Fragment Shader */
     fragment_str = load_shader("shaders/tri.frag");
     fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
+    
+    if (!fragment_str) {
+        error = 1;
+        goto end;
+    }
+
     glShaderSource(fragment_id, 1, (const GLchar* const*)&fragment_str, NULL);
     glCompileShader(fragment_id);
 
