@@ -7,35 +7,35 @@
 #include "renderer.h"
 #include <GLFW/glfw3.h> /* after renderer because renderer includes glad which muss be included after glfw */
 
-static struct vec2 check_vec2(lua_State *L, int idx) {
+static struct vec2 check_vec2(lua_State *L, const int idx) {
     struct vec2 v;
     luaL_checktype(L, idx, LUA_TTABLE);
 
     lua_rawgeti(L, idx, 1);
-    v.x = (float)luaL_checknumber(L, -1);
+    v.x = (float) luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     lua_rawgeti(L, idx, 2);
-    v.y = (float)luaL_checknumber(L, -1);
+    v.y = (float) luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     return v;
 }
 
-static struct color3 check_color3(lua_State *L, int idx) {
+static struct color3 check_color3(lua_State *L, const int idx) {
     struct color3 c;
     luaL_checktype(L, idx, LUA_TTABLE);
 
     lua_rawgeti(L, idx, 1);
-    c.r = (float)luaL_checknumber(L, -1);
+    c.r = (float) luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     lua_rawgeti(L, idx, 2);
-    c.g = (float)luaL_checknumber(L, -1);
+    c.g = (float) luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     lua_rawgeti(L, idx, 3);
-    c.b = (float)luaL_checknumber(L, -1);
+    c.b = (float) luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     return c;
@@ -44,8 +44,6 @@ static struct color3 check_color3(lua_State *L, int idx) {
 static int quit(lua_State *L) {
     (void) L;
     exit(0);
-
-    return 0;
 }
 
 static int print(lua_State *L) {
@@ -55,13 +53,9 @@ static int print(lua_State *L) {
 }
 
 static int push_quad(lua_State *L) {
-    struct color3 color;
-    struct vec2 pos;
-    texture_id tex;
-
-    pos = check_vec2(L, 1);
-    color = check_color3(L, 2);
-    tex = luaL_checkint(L, 3);
+    const struct vec2 pos = check_vec2(L, 1);
+    const struct color3 color = check_color3(L, 2);
+    const texture_id tex = luaL_checkint(L, 3);
 
     renderer_push_quad(&ctx, pos, 1.0f, 0.0f, color, tex);
 
@@ -69,13 +63,13 @@ static int push_quad(lua_State *L) {
 }
 
 static int load_texture(lua_State *L) {
-    texture_id tex = renderer_load_texture(luaL_checkstring(L, 1));
+    const texture_id tex = renderer_load_texture(luaL_checkstring(L, 1));
     lua_pushinteger(L, tex);
     return 1;
 }
 
 static int key_pressed(lua_State *L) {
-    if (glfwGetKey(window, luaL_checkint(L, 1)) == GLFW_PRESS) {
+    if (glfwGetKey(ctx.window, luaL_checkint(L, 1)) == GLFW_PRESS) {
         lua_pushinteger(L, 1);
         return 1;
     }
@@ -83,7 +77,7 @@ static int key_pressed(lua_State *L) {
 }
 
 static int key_down(lua_State *L) {
-    if (glfwGetKey(window, luaL_checkint(L, 1)) != GLFW_RELEASE) {
+    if (glfwGetKey(ctx.window, luaL_checkint(L, 1)) != GLFW_RELEASE) {
         lua_pushinteger(L, 1);
         return 1;
     }
@@ -91,7 +85,7 @@ static int key_down(lua_State *L) {
 }
 
 static int mouse_pressed(lua_State *L) {
-    if (glfwGetMouseButton(window, luaL_checkint(L, 1)) == GLFW_PRESS) {
+    if (glfwGetMouseButton(ctx.window, luaL_checkint(L, 1)) == GLFW_PRESS) {
         lua_pushinteger(L, 1);
         return 1;
     }
@@ -99,7 +93,7 @@ static int mouse_pressed(lua_State *L) {
 }
 
 static int mouse_down(lua_State *L) {
-    if (glfwGetMouseButton(window, luaL_checkint(L, 1)) != GLFW_RELEASE) {
+    if (glfwGetMouseButton(ctx.window, luaL_checkint(L, 1)) != GLFW_RELEASE) {
         lua_pushinteger(L, 1);
         return 1;
     }
@@ -109,7 +103,7 @@ static int mouse_down(lua_State *L) {
 static int mouse_pos(lua_State *L) {
     double x;
     double y;
-    glfwGetCursorPos(window, &x, &y);
+    glfwGetCursorPos(ctx.window, &x, &y);
 
     lua_newtable(L);
     lua_pushnumber(L, x);
@@ -129,7 +123,7 @@ static const luaL_Reg api[] = {
     {"push_quad", push_quad},
     {"load_texture", load_texture},
 
-    /* Input */ 
+    /* Input */
     {"key_pressed", key_pressed},
     {"key_down", key_down},
     {"mouse_pressed", mouse_pressed},
@@ -147,19 +141,19 @@ static void keys_init(lua_State *L) {
 
     for (i = 'A'; i <= 'Z'; i++) {
         lua_pushinteger(L, i);
-        k[0] = (char)(i + 'a' - 'A');
+        k[0] = (char) (i + 'a' - 'A');
         lua_setfield(L, -2, k);
     }
 
     for (i = 'A'; i <= 'Z'; i++) {
         lua_pushinteger(L, i);
-        k[0] = (char)i;
+        k[0] = (char) i;
         lua_setfield(L, -2, k);
     }
 
     for (i = '0'; i <= '9'; i++) {
         lua_pushinteger(L, i);
-        k[0] = (char)i;
+        k[0] = (char) i;
         lua_setfield(L, -2, k);
     }
 
@@ -184,7 +178,7 @@ static void keys_init(lua_State *L) {
     lua_setglobal(L, "key");
 }
 
-static const char* mouse_names[] = {
+static const char *mouse_names[] = {
     "left",
     "right",
     "middle",
@@ -196,11 +190,9 @@ static const char* mouse_names[] = {
 };
 
 static void mouse_init(lua_State *L) {
-    int i;
-
     lua_newtable(L);
 
-    for (i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++) {
         lua_pushinteger(L, i);
         lua_setfield(L, -2, mouse_names[i]);
     }
@@ -209,10 +201,8 @@ static void mouse_init(lua_State *L) {
 }
 
 void lua_api_init(lua_State *L) {
-    const luaL_Reg *f;
-
     lua_newtable(L);
-    for (f = api; f->name; f++) {
+    for (const luaL_Reg *f = api; f->name; f++) {
         lua_pushcfunction(L, f->func);
         lua_setfield(L, -2, f->name);
     }

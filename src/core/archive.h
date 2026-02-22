@@ -1,6 +1,8 @@
 #ifndef ARCHIVE_H
 #define ARCHIVE_H
 
+#include <stdint.h>
+
 #define ARCHIVE_MAGIC 0x4B415021
 #define ARCHIVE_NAMELEN 56
 /* size of entry on disk */
@@ -14,15 +16,15 @@
 /* entry: name(56) | offset(4) | size(4) */
 struct archive_entry {
     char name[ARCHIVE_NAMELEN];
-    unsigned long offset;
-    unsigned long size;
+    uint32_t offset;
+    uint32_t size;
 };
 
 /* header: magic(4) | n(4) */
 struct archive_header {
-    unsigned long magic;
+    uint32_t magic;
     /* the amount of files */
-    unsigned long n;
+    uint32_t n;
 };
 
 /* data is raw file bytes. */
@@ -35,7 +37,7 @@ int archive_list(const char *name);
 
 int archive_extract_alloc(const char *name);
 
-/* returns a malloc'd buffer */
-void *archive_read_alloc(const char *name, const char *file, unsigned long *len);
+/* returns a malloc 'd buffer */
+void *archive_read_alloc(const char *name, const char *file, uint32_t *len);
 
 #endif /* ARCHIVE_H */

@@ -47,11 +47,9 @@ static int push(lua_State *L, const char *name) {
 }
 
 lua_State *lua_init(const char *archive, const char *entry) {
-    lua_State *L;
-    unsigned long len;
-    char *buf;
+    uint32_t len;
 
-    L = luaL_newstate();
+    lua_State *L = luaL_newstate();
     if (!L) {
         return NULL;
     }
@@ -59,7 +57,7 @@ lua_State *lua_init(const char *archive, const char *entry) {
     luaL_openlibs(L);
     lua_api_init(L);
 
-    buf = archive_read_alloc(archive, entry, &len);
+    char *buf = archive_read_alloc(archive, entry, &len);
     if (!buf) {
         lua_close(L);
 
@@ -96,15 +94,13 @@ void lua_quit(lua_State *L) {
 
 lua_State *lua_reload(lua_State *L, const char *archive, const char *entry) {
     /* the new lua state */
-    lua_State *N;
-    long mtime;
 
-    mtime = fmtime(archive);
+    const long mtime = fmtime(archive);
     if (mtime <= last_mtime) {
         return L;
     }
 
-    N = lua_init(archive, entry);
+    lua_State *N = lua_init(archive, entry);
     if (!N) {
         last_mtime = mtime;
 

@@ -1,44 +1,40 @@
 #include "archive.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static void put32(unsigned long x, FILE *f) {
-    fputc(x & 0xff, f);
-    fputc((x >> 8) & 0xff, f);
-    fputc((x >> 16) & 0xff, f);
-    fputc((x >> 24) & 0xff, f);
+static void put32(const uint32_t x, FILE *f) {
+    fputc((int)(x & 0xffu), f);
+    fputc((int)(x >> 8 & 0xffu), f);
+    fputc((int)(x >> 16 & 0xffu), f);
+    fputc((int)(x >> 24 & 0xffu), f);
 }
 
-static unsigned long get32(FILE *f) {
-    unsigned long x;
-
-    x = fgetc(f) & 0xff;
-    x |= (fgetc(f) & 0xff) << 8;
-    x |= (fgetc(f) & 0xff) << 16;
-    x |= (fgetc(f) & 0xff) << 24;
+static uint32_t get32(FILE *f) {
+    uint32_t x = (uint32_t)(fgetc(f) & 0xff);
+    x |= (uint32_t)(fgetc(f) & 0xff) << 8;
+    x |= (uint32_t)(fgetc(f) & 0xff) << 16;
+    x |= (uint32_t)(fgetc(f) & 0xff) << 24;
 
     return x;
 }
 
 static long fsize(FILE *f) {
-    long pos, end;
-
-    pos = ftell(f);
+    const long pos = ftell(f);
     fseek(f, 0, SEEK_END);
-    end = ftell(f);
+    const long end = ftell(f);
     fseek(f, pos, SEEK_SET);
 
     return end;
 }
 
-static void fcopy(FILE *dst, FILE *src, unsigned long n) {
+static void fcopy(FILE *dst, FILE *src, size_t n) {
     char buf[4096];
-    unsigned long r;
 
     while (n > 0) {
-        r = n < sizeof buf ? n : sizeof buf;
+        size_t r = n < sizeof buf ? n : sizeof buf;
         r = fread(buf, 1, r, src);
 
         if (r == 0) {
@@ -51,19 +47,17 @@ static void fcopy(FILE *dst, FILE *src, unsigned long n) {
 }
 
 int archive_create(const char *name, char **argv, const int n) {
-    FILE *out, *in;
-    struct archive_entry *dir;
-    unsigned long offset;
+    FILE *in;
     int i;
 
-    out = fopen(name, "wb");
+    FILE *out = fopen(name, "wb");
     if (!out) {
         perror(name);
 
         return -1;
     }
 
-    dir = calloc(n, sizeof(struct archive_entry));
+    struct archive_entry *dir = calloc(n, sizeof(struct archive_entry));
     if (!dir) {
         fprintf(stderr, "out of memory");
         fclose(out);
@@ -72,15 +66,13 @@ int archive_create(const char *name, char **argv, const int n) {
     }
 
     put32(ARCHIVE_MAGIC, out);
-    put32(n, out);
+    put32((uint32_t)n, out);
 
     /* data starts after header and directory */
-    offset = 8 + n * ARCHIVE_ENTRY_SIZE;
+    uint32_t offset = 8 + (uint32_t)n * ARCHIVE_ENTRY_SIZE;
 
     /* measure each file and build dirs only in memory yet */
     for (i = 0; i < n; i++) {
-        const char *base;
-
         in = fopen(argv[i], "rb");
         if (!in) {
             perror(argv[i]);
@@ -91,11 +83,11 @@ int archive_create(const char *name, char **argv, const int n) {
         }
 
         /* store only the filename, not the full path */
-        base = strrchr(argv[i], '/');
+        const char *base = strrchr(argv[i], '/');
         base = base ? base + 1 : argv[i];
 
         strncpy(dir[i].name, base, ARCHIVE_NAMELEN - 1);
-        dir[i].size = fsize(in);
+        dir[i].size = (uint32_t)fsize(in);
         dir[i].offset = offset;
         offset += dir[i].size;
 
@@ -133,18 +125,16 @@ int archive_create(const char *name, char **argv, const int n) {
 
 /* list contents of archive */
 int archive_list(const char *name) {
-    FILE *f;
-    unsigned long magic, n, i;
     struct archive_entry e;
 
-    f = fopen(name, "rb");
+    FILE *f = fopen(name, "rb");
     if (!f) {
         perror(name);
 
         return -1;
     }
 
-    magic = get32(f);
+    const uint32_t magic = get32(f);
     if (magic != ARCHIVE_MAGIC) {
         fprintf(stderr, "%s: not a valid archive\n", name);
         fclose(f);
@@ -152,14 +142,14 @@ int archive_list(const char *name) {
         return -1;
     }
 
-    n = get32(f);
+    const uint32_t n = get32(f);
     printf("%-56s %10s %10s\n", "name", "offset", "size");
-    for (i = 0; i < n; i++) {
+    for (uint32_t i = 0; i < n; i++) {
         fread(e.name, 1, ARCHIVE_NAMELEN, f);
         e.offset = get32(f);
         e.size = get32(f);
 
-        printf("%-56s %10lu %10lu\n", e.name, e.offset, e.size);
+        printf("%-56s %10" PRIu32 " %10" PRIu32 "\n", e.name, e.offset, e.size);
     }
 
     fclose(f);
@@ -168,17 +158,15 @@ int archive_list(const char *name) {
 }
 
 int archive_extract_alloc(const char *name) {
-    FILE *f, *out;
-    unsigned long magic, n, i;
-    struct archive_entry *dir;
+    uint32_t i;
 
-    f = fopen(name, "rb");
+    FILE *f = fopen(name, "rb");
     if (!f) {
         perror(name);
         return -1;
     }
 
-    magic = get32(f);
+    const uint32_t magic = get32(f);
     if (magic != ARCHIVE_MAGIC) {
         fprintf(stderr, "%s: not a valid archive\n", name);
         fclose(f);
@@ -186,8 +174,8 @@ int archive_extract_alloc(const char *name) {
         return -1;
     }
 
-    n = get32(f);
-    dir = calloc(n, sizeof(struct archive_entry));
+    const uint32_t n = get32(f);
+    struct archive_entry *dir = calloc(n, sizeof(struct archive_entry));
     if (!dir) {
         fprintf(stderr, "out of memory\n");
         fclose(f);
@@ -202,14 +190,14 @@ int archive_extract_alloc(const char *name) {
     }
 
     for (i = 0; i < n; i++) {
-        printf("%s: %lu bytes\n", dir[i].name, dir[i].size);
-        out = fopen(dir[i].name, "wb");
+        printf("%s: %" PRIu32 " bytes\n", dir[i].name, dir[i].size);
+        FILE *out = fopen(dir[i].name, "wb");
         if (!out) {
             perror(dir[i].name);
             continue;
         }
 
-        fseek(f, dir[i].offset, SEEK_SET);
+        fseek(f, (long)dir[i].offset, SEEK_SET);
         fcopy(out, f, dir[i].size);
 
         fclose(out);
@@ -221,20 +209,17 @@ int archive_extract_alloc(const char *name) {
     return 0;
 }
 
-void *archive_read_alloc(const char *name, const char *file, unsigned long *len) {
-    FILE *f;
-    unsigned long magic, n, i;
+void *archive_read_alloc(const char *name, const char *file, uint32_t *len) {
     struct archive_entry e;
-    void *buf;
 
-    f = fopen(name, "rb");
+    FILE *f = fopen(name, "rb");
     if (!f) {
         perror(name);
 
         return NULL;
     }
 
-    magic = get32(f);
+    const uint32_t magic = get32(f);
     if (magic != ARCHIVE_MAGIC) {
         fprintf(stderr, "%s: not a valid archive\n", name);
         fclose(f);
@@ -242,14 +227,14 @@ void *archive_read_alloc(const char *name, const char *file, unsigned long *len)
         return NULL;
     }
 
-    n = get32(f);
-    for (i = 0; i < n; i++) {
+    const uint32_t n = get32(f);
+    for (uint32_t i = 0; i < n; i++) {
         fread(e.name, 1, ARCHIVE_NAMELEN, f);
         e.offset = get32(f);
         e.size = get32(f);
 
         if (strcmp(e.name, file) == 0) {
-            buf = malloc(e.size + 1);
+            void *buf = malloc(e.size + 1);
             if (!buf) {
                 fprintf(stderr, "out of memory\n");
                 fclose(f);
@@ -257,7 +242,7 @@ void *archive_read_alloc(const char *name, const char *file, unsigned long *len)
                 return NULL;
             }
 
-            fseek(f, e.offset, SEEK_SET);
+            fseek(f, (long)e.offset, SEEK_SET);
             fread(buf, 1, e.size, f);
             ((char *) buf)[e.size] = '\0';
 

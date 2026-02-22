@@ -4,7 +4,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#define CORE_RENDERER_QUAD_NO_TEXTURE -1
+#include <stddef.h>
+
+#define CORE_RENDERER_QUAD_NO_TEXTURE (-1)
 
 struct vec2 {
     float x;
@@ -34,6 +36,7 @@ struct quad_data {
 struct render_context {
     int width;
     int height;
+    GLFWwindow *window;
 
     GLuint vao;
     GLuint vbo;
@@ -43,27 +46,23 @@ struct render_context {
     GLuint tex_program;
 
     struct quad_data *quads;
-    int quads_count;
-    int quads_capacity;
+    size_t quads_count;
+    size_t quads_capacity;
 };
 
 extern struct render_context ctx;
-extern GLFWwindow* window;
+extern GLFWwindow *window;
 
-int renderer_init(struct render_context *ctx);
+int renderer_init(struct render_context *r);
+void renderer_deinit(const struct render_context *r);
+void renderer_push_quad(struct render_context *r, struct vec2 pos, float scale, float rotation, struct color3 color, texture_id tex);
+void renderer_draw(struct render_context *r);
 
-void renderer_deinit(struct render_context *ctx);
-
-void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale, float rotation, struct color3 c, texture_id tex);
-
-void renderer_draw(struct render_context *ctx);
-
-texture_id renderer_load_texture(const char* path);
+texture_id renderer_load_texture(const char *path);
 
 /* Math */
 void math_matrix_identity(struct matrix *m);
-
-void math_matrix_translate(struct matrix *m, float x, float y, float z); /* Maybe vec3 idk this is jus temp */
+void math_matrix_translate(struct matrix *m, float x, float y, float z);
 void math_matrix_scale(struct matrix *m, float x, float y, float z);
 
 #endif
