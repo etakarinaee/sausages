@@ -57,13 +57,21 @@ static int print(lua_State *L) {
 static int push_quad(lua_State *L) {
     struct color3 color;
     struct vec2 pos;
+    texture_id tex;
 
     pos = check_vec2(L, 1);
     color = check_color3(L, 2);
+    tex = luaL_checkint(L, 3);
 
-    renderer_push_quad(&ctx, pos, 1.0f, 0.0f, color);
+    renderer_push_quad(&ctx, pos, 1.0f, 0.0f, color, tex);
 
     return 0;
+}
+
+static int load_texture(lua_State *L) {
+    texture_id tex = renderer_load_texture(luaL_checkstring(L, 1));
+    lua_pushinteger(L, tex);
+    return 1;
 }
 
 static int key_pressed(lua_State *L) {
@@ -116,7 +124,10 @@ static int mouse_pos(lua_State *L) {
 static const luaL_Reg api[] = {
     {"quit", quit},
     {"print", print},
+
+    /* Render */
     {"push_quad", push_quad},
+    {"load_texture", load_texture},
 
     /* Input */ 
     {"key_pressed", key_pressed},

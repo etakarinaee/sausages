@@ -25,6 +25,7 @@ int main(void) {
     int width, height;
     double current_time, last_time;
     double delta_time;
+    texture_id tex;
 
     /* check for game data before doing anything */
     test = fopen(SAUSAGES_DATA, "rb");
@@ -70,6 +71,8 @@ int main(void) {
 
     renderer_init(&ctx);
 
+    tex = renderer_load_texture("../test.png");
+
     while (!glfwWindowShouldClose(window)) {
         delta_time = current_time - last_time;
         last_time = current_time;
@@ -93,11 +96,11 @@ int main(void) {
             pos.x = (x / ctx.width) * 2.0f - 1.0f;
             pos.y = -((y / ctx.height) * 2.0f - 1.0f);
 
-            color.r = 0.2f;
+            color.r = 1.0f;
             color.g = 1.0f;
-            color.b = 0.3f;
+            color.b = 1.0f;
 
-            renderer_push_quad(&ctx, pos, 1.0f, 0.0f, color);
+            renderer_push_quad(&ctx, pos, 1.0f, 0.0f, color, tex);
         }
 
         renderer_draw(&ctx);

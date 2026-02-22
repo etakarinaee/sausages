@@ -11,11 +11,11 @@ struct render_context ctx;
 GLFWwindow* window;
 
 float rectangle_vertices[] = {
-    /* POS              COLOR */
-    0.5f, 0.5f, 1.0f, 1.0f,
-    0.5f, -0.5f, 1.0f, 0.0f,
-    -0.5f, -0.5f, 0.0f, 0.0f,
-    -0.5f, 0.5f, 0.0f, 1.0f,
+    /* POS              COLOR    TEXCOORD*/
+    0.5f, 0.5f,     1.0f, 1.0f,  1.0f, 1.0f,
+    0.5f, -0.5f,    1.0f, 0.0f,  0.0f, 1.0f,
+    -0.5f, -0.5f,   0.0f, 0.0f,  0.0f, 0.0f,
+    -0.5f, 0.5f,    0.0f, 1.0f,  1.0f, 0.0f,
 };
 
 unsigned int rectangle_indices[] = {
@@ -35,11 +35,14 @@ static void buffers_init(struct render_context *ctx) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ctx->ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rectangle_indices), rectangle_indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *) 0);
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) (2 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *) (2 * sizeof(float)));
     glEnableVertexAttribArray(1);
+
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *) (4 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 }
 
 static int program_init(const char* vert_path, const char* frag_path, GLuint* program) {
@@ -143,7 +146,7 @@ void renderer_deinit(struct render_context *ctx) {
     if (ctx->quads) free(ctx->quads);
 }
 
-void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale, float rotation, struct color3 c) {
+void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale, float rotation, struct color3 c, texture_id tex) {
     struct quad_data data;
     struct quad_data *new_data;
 
@@ -169,7 +172,7 @@ void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale
     data.scale = scale;
     data.rotation = rotation;
     data.color = c;
-    data.tex = -1;
+    data.tex = tex;
 
     ctx->quads[ctx->quads_count - 1] = data;
 }
@@ -188,21 +191,21 @@ void renderer_draw(struct render_context *ctx) {
         data = &ctx->quads[i];
         math_matrix_translate(&m, data->pos.x, data->pos.y, 0.0f);
 
-        if (data->tex == -1) {
+        if (data->tex == CORE_RENDERER_QUAD_NO_TEXTURE) {
             /* No Texture */
             glUseProgram(ctx->quad_program);
             uniform_matrix_loc = glGetUniformLocation(ctx->quad_program, "u_matrix");
             uniform_color_loc = glGetUniformLocation(ctx->quad_program, "u_color");
+            glUniform3f(uniform_color_loc, data->color.r, data->color.g, data->color.b);
         }
         else {
             /* Texture */
+            glBindTexture(GL_TEXTURE_2D, data->tex);
             glUseProgram(ctx->tex_program);
             uniform_matrix_loc = glGetUniformLocation(ctx->tex_program, "u_matrix");
-            uniform_color_loc = glGetUniformLocation(ctx->tex_program, "u_color");
         }
 
         glUniformMatrix4fv(uniform_matrix_loc, 1, GL_FALSE, m.m);
-        glUniform3f(uniform_color_loc, data->color.r, data->color.g, data->color.b);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
 }

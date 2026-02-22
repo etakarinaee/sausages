@@ -4,6 +4,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#define CORE_RENDERER_QUAD_NO_TEXTURE -1
+
 struct vec2 {
     float x;
     float y;
@@ -52,7 +54,7 @@ int renderer_init(struct render_context *ctx);
 
 void renderer_deinit(struct render_context *ctx);
 
-void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale, float rotation, struct color3 c);
+void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale, float rotation, struct color3 c, texture_id tex);
 
 void renderer_draw(struct render_context *ctx);
 
