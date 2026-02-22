@@ -10,11 +10,11 @@
 struct render_context ctx;
 
 static const float rectangle_vertices[] = {
-    /* POS           UV           TEXCOORD */
-    0.5f, 0.5f,     1.0f, 1.0f,  1.0f, 1.0f,
-    0.5f, -0.5f,    1.0f, 0.0f,  1.0f, 0.0f,
-    -0.5f, -0.5f,   0.0f, 0.0f,  0.0f, 0.0f,
-    -0.5f, 0.5f,    0.0f, 1.0f,  0.0f, 1.0f,
+    /* POS           UV     */     
+    0.5f, 0.5f,     1.0f, 1.0f,  
+    0.5f, -0.5f,    1.0f, 0.0f,  
+    -0.5f, -0.5f,   0.0f, 0.0f,  
+    -0.5f, 0.5f,    0.0f, 1.0f,
 };
 
 static const unsigned int rectangle_indices[] = {
@@ -34,14 +34,11 @@ static void buffers_init(struct render_context *r) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rectangle_indices), rectangle_indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(2 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
-
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(4 * sizeof(float)));
-    glEnableVertexAttribArray(2);
 }
 
 static int program_init(const char *vert_path, const char *frag_path, GLuint *program) {
@@ -177,7 +174,11 @@ void renderer_draw(struct render_context *r) {
             const GLint uniform_color_loc = glGetUniformLocation(r->quad_program, "u_color");
             glUniform3f(uniform_color_loc, data->color.r, data->color.g, data->color.b);
         } else {
+            glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, data->tex);
+            GLint sampler_loc = glGetUniformLocation(r->tex_program, "u_texture");
+            glUniform1i(sampler_loc, 0);
+
             glUseProgram(r->tex_program);
             uniform_matrix_loc = glGetUniformLocation(r->tex_program, "u_matrix");
         }

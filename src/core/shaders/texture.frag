@@ -1,7 +1,6 @@
 
 #version 330 core
 
-in vec3 out_color;
 in vec2 texcoord;
 
 out vec4 fragment_color;
