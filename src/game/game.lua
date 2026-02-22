@@ -7,7 +7,7 @@ function game_init()
 end
 
 function game_update(delta_time)
-    if core.mouse_down(mouse.left) == 1 then 
+    if core.mouse_down(mouse.left) then 
         local dim = core.get_screen_dimensions()
         local pos = core.mouse_pos()
     
@@ -17,7 +17,7 @@ function game_update(delta_time)
         core.push_quad_ex({x, y}, {0.5, 0.5, 0.5}, image, 0.2, angle);
     end
 
-    if (core.key_pressed(key.r) == 1) then 
+    if core.key_pressed(key.r) then 
         angle = angle + 1.0
         core.print("Angle:" .. tostring(angle))
     end
