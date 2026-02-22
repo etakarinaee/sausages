@@ -2,20 +2,33 @@
 #define RENDERER_H
 
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
+#define CORE_RENDERER_QUAD_NO_TEXTURE -1
 
 struct vec2 {
     float x;
     float y;
 };
 
+struct color3 {
+    float r;
+    float g;
+    float b;
+};
+
 struct matrix {
     float m[16];
 };
 
+typedef GLint texture_id;
+
 struct quad_data {
-    struct vec2 pos;
+    texture_id tex;
     float scale;
     float rotation;
+    struct vec2 pos;
+    struct color3 color;
 };
 
 struct render_context {
@@ -25,20 +38,27 @@ struct render_context {
     GLuint vao;
     GLuint vbo;
     GLuint ebo;
-    GLuint program;
+
+    GLuint quad_program;
+    GLuint tex_program;
 
     struct quad_data *quads;
     int quads_count;
     int quads_capacity;
 };
 
+extern struct render_context ctx;
+extern GLFWwindow* window;
+
 int renderer_init(struct render_context *ctx);
 
 void renderer_deinit(struct render_context *ctx);
 
-void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale, float rotation);
+void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale, float rotation, struct color3 c, texture_id tex);
 
 void renderer_draw(struct render_context *ctx);
+
+texture_id renderer_load_texture(const char* path);
 
 /* Math */
 void math_matrix_identity(struct matrix *m);

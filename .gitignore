@@ -9,3 +9,4 @@ Makefile
 arc
 sausages
 *.a
+build/
