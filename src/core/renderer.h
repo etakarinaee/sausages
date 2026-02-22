@@ -19,6 +19,8 @@ struct matrix {
     float m[16];
 };
 
+typedef GLint texture_id;
+
 struct quad_data {
     float scale;
     float rotation;
@@ -50,6 +52,8 @@ void renderer_deinit(struct render_context *ctx);
 void renderer_push_quad(struct render_context *ctx, struct vec2 pos, float scale, float rotation, struct color3 c);
 
 void renderer_draw(struct render_context *ctx);
+
+texture_id renderer_load_texture(struct render_context* ctx, const char* path);
 
 /* Math */
 void math_matrix_identity(struct matrix *m);

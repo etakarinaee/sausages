@@ -8,6 +8,9 @@ set(CMAKE_C_STANDARD 90)
 add_library(glad STATIC lib/glad/glad.c)
 target_include_directories(glad PRIVATE ${CMAKE_SOURCE_DIR}/lib)
 
+# stbi
+add_library(stbi STATIC lib/stbi/stb_image.c)
+
 add_executable(arc tools/arc.c src/core/archive.c)
 target_compile_options(arc PRIVATE -pedantic-errors -Wall -Wextra)
 
@@ -33,6 +36,6 @@ add_executable(sausages src/core/core.c src/core/archive.c src/core/lua.c src/co
 
 target_compile_options(sausages PRIVATE -pedantic-errors -Wall -Wextra)
 target_include_directories(sausages PRIVATE ${CMAKE_SOURCE_DIR}/lib)
-target_link_libraries(sausages glad GL glfw luajit-5.1 m dl)
+target_link_libraries(sausages glad stbi GL glfw luajit-5.1 m dl)
 
 add_dependencies(sausages pack_assets)

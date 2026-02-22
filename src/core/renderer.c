@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <stbi/stb_image.h>
+
 struct render_context ctx;
 GLFWwindow* window;
 
@@ -187,6 +189,44 @@ void renderer_draw(struct render_context *ctx) {
         glUniform3f(uniform_color_loc, data->color.r, data->color.g, data->color.b);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
+}
+
+texture_id renderer_load_texture(struct render_context *ctx, const char *path) {
+    int width, height, channels;
+    unsigned char* data;
+    GLuint texture;
+    GLint format;
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    stbi_set_flip_vertically_on_load(1);
+    data = stbi_load(path, &width, &height, &channels, 0);
+    if (!data) {
+        fprintf(stderr, "failed to load texture: %s\n", path);
+        return -1;
+    }
+
+    format = GL_RGB;
+
+    if (channels == 4) {
+        format = GL_RGBA;
+    }
+    else if (channels == 1) {
+        format = GL_RED;
+    }
+
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(data);
+
+    return (texture_id)texture;
 }
 
 void math_matrix_identity(struct matrix *m) {
