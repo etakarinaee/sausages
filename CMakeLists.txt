@@ -23,7 +23,8 @@ set(ARC_INPUTS
         ${CMAKE_SOURCE_DIR}/src/core/shaders/quad.frag
         ${CMAKE_SOURCE_DIR}/src/core/shaders/texture.vert
         ${CMAKE_SOURCE_DIR}/src/core/shaders/texture.frag
-        ${CMAKE_SOURCE_DIR}/src/game/game.lua
+        ${CMAKE_SOURCE_DIR}/src/game/client.lua
+        ${CMAKE_SOURCE_DIR}/src/game/server.lua
 )
 
 add_custom_command(
@@ -35,10 +36,30 @@ add_custom_command(
 
 add_custom_target(pack_assets ALL DEPENDS ${ARCHIVE_FILE})
 
-add_executable(sausages src/core/core.c src/core/archive.c src/core/lua.c src/core/lua_api.c src/core/renderer.c)
+# shared sources
+set(CORE_SOURCES
+        src/core/core.c
+        src/core/archive.c
+        src/core/lua.c
+        src/core/lua_api.c
+        src/core/renderer.c
+        src/core/net.c
+)
 
-target_compile_options(sausages PRIVATE -pedantic-errors -Wall -Wextra)
-target_include_directories(sausages PRIVATE ${CMAKE_SOURCE_DIR}/lib)
-target_link_libraries(sausages glad stbi GL glfw luajit-5.1 m dl)
+set(CORE_FLAGS -pedantic-errors -Wall -Wextra)
+set(CORE_LIBS glad stbi GL glfw luajit-5.1 m dl)
 
-add_dependencies(sausages pack_assets)
+# client
+add_executable(client ${CORE_SOURCES})
+target_compile_options(client PRIVATE ${CORE_FLAGS})
+target_include_directories(client PRIVATE ${CMAKE_SOURCE_DIR}/lib)
+target_link_libraries(client ${CORE_LIBS})
+add_dependencies(client pack_assets)
+
+# server
+add_executable(server ${CORE_SOURCES})
+target_compile_definitions(server PRIVATE SERVER)
+target_compile_options(server PRIVATE ${CORE_FLAGS})
+target_include_directories(server PRIVATE ${CMAKE_SOURCE_DIR}/lib)
+target_link_libraries(server ${CORE_LIBS})
+add_dependencies(server pack_assets)

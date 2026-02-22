@@ -3,12 +3,19 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <luajit-2.1/lua.h>
 
 #include "archive.h"
 #include "lua.h"
 #include "renderer.h"
+
+#ifdef SERVER
+#define ENTRY SAUSAGES_ENTRY_SERVER
+#else
+#define ENTRY SAUSAGES_ENTRY_CLIENT
+#endif
 
 static lua_State *L;
 
@@ -53,7 +60,7 @@ int main(void) {
     glfwSetFramebufferSizeCallback(window, resize_callback);
     glfwSetWindowUserPointer(window, &ctx);
 
-    L = lua_init(SAUSAGES_DATA, SAUSAGES_ENTRY);
+    L = lua_init(SAUSAGES_DATA, ENTRY);
     if (!L) {
         fprintf(stderr, "lua_init() failed\n");
         glfwTerminate();
@@ -64,14 +71,27 @@ int main(void) {
     renderer_init(&ctx);
 
     const texture_id tex = renderer_load_texture("../test.png");
-    double last_time = glfwGetTime();
 
+#ifdef SERVER
+    double last_time = glfwGetTime();
+    while (1) {
+        const double current_time = glfwGetTime();
+        const double delta_time = current_time - last_time;
+        last_time = current_time;
+
+        L = lua_reload(L, SAUSAGES_DATA, ENTRY);
+        lua_call_update(L, delta_time);
+
+        usleep(1000);
+    }
+#else
+    double last_time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
         const double current_time = glfwGetTime();
         const double delta_time = current_time - last_time;
         last_time = current_time;
 
-        L = lua_reload(L, SAUSAGES_DATA, SAUSAGES_ENTRY);
+        L = lua_reload(L, SAUSAGES_DATA, ENTRY);
         lua_call_update(L, delta_time);
 
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
@@ -95,6 +115,7 @@ int main(void) {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+#endif
 
     renderer_deinit(&ctx);
     lua_quit(L);

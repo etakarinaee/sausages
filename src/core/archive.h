@@ -11,7 +11,8 @@
 /* where the game data is stored */
 #define SAUSAGES_DATA "sausages.arc"
 /* entrypoint in lua */
-#define SAUSAGES_ENTRY "game.lua"
+#define SAUSAGES_ENTRY_CLIENT "client.lua"
+#define SAUSAGES_ENTRY_SERVER "server.lua"
 
 /* entry: name(56) | offset(4) | size(4) */
 struct archive_entry {
