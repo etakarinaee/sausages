@@ -126,6 +126,9 @@ int renderer_init(struct render_context *r) {
         return 1;
     }
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
     r->quads = calloc(2, sizeof(struct quad_data));
     r->quads_count = 0;
     r->quads_capacity = 2;
@@ -174,13 +177,13 @@ void renderer_draw(struct render_context *r) {
             const GLint uniform_color_loc = glGetUniformLocation(r->quad_program, "u_color");
             glUniform3f(uniform_color_loc, data->color.r, data->color.g, data->color.b);
         } else {
+            glUseProgram(r->tex_program);
+            uniform_matrix_loc = glGetUniformLocation(r->tex_program, "u_matrix");
+
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, data->tex);
             GLint sampler_loc = glGetUniformLocation(r->tex_program, "u_texture");
             glUniform1i(sampler_loc, 0);
-
-            glUseProgram(r->tex_program);
-            uniform_matrix_loc = glGetUniformLocation(r->tex_program, "u_matrix");
         }
 
         glUniformMatrix4fv(uniform_matrix_loc, 1, GL_FALSE, m.m);
@@ -195,9 +198,10 @@ texture_id renderer_load_texture(const char *path) {
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     stbi_set_flip_vertically_on_load(1);
