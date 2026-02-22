@@ -73,10 +73,13 @@ int main(void) {
 
     renderer_init(&ctx);
 
+    last_time = glfwGetTime();
+
     while (!glfwWindowShouldClose(window)) {
+        current_time = glfwGetTime();
+
         delta_time = current_time - last_time;
         last_time = current_time;
-        current_time = glfwGetTime();
 
         L = lua_reload(L, SAUSAGES_DATA, SAUSAGES_ENTRY);
         lua_call_update(L, delta_time);
