@@ -61,8 +61,8 @@ void renderer_draw(struct render_context *r);
 texture_id renderer_load_texture(const char *path);
 
 /* Math */
-#define RAD2DEG (M_PI / 360.0 * 2.0)
-#define DEG2RAD (360.0 / M_PI / 2.0)
+#define RAD2DEG(x) (x * 180.0f / M_PI)
+#define DEG2RAD(x) (x * M_PI / 180.0f)
 
 void math_matrix_identity(struct matrix *m);
 void math_matrix_translate(struct matrix *m, float x, float y, float z);

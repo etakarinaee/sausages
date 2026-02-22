@@ -256,7 +256,7 @@ void math_matrix_scale(struct matrix *m, const float x, const float y, const flo
 }
 
 void math_matrix_rotate_2d(struct matrix *m, float angle) {
-    float theta = angle * DEG2RAD;
+    float theta = DEG2RAD(angle);
 
     *m = (struct matrix){ .m = {
         [0] = cos(theta), [1] = -sin(theta), 
