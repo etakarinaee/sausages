@@ -5,3 +5,4 @@ tanks
 *.cmake
 CMakeFiles/
 CMakeCache.txt
+Makefile
