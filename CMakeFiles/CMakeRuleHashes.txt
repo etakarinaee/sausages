@@ -1,3 +1,0 @@
-# Hashes of file build rules.
-73d74220520eff6c5b0ac7a45a97d40c CMakeFiles/shaders
-f490c8d73c04d4edb205705169182781 sausages.arc

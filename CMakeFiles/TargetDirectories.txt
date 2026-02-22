@@ -1,5 +1,0 @@
-/home/ttchef/coding/c/tanks/CMakeFiles/arc.dir
-/home/ttchef/coding/c/tanks/CMakeFiles/shaders.dir
-/home/ttchef/coding/c/tanks/CMakeFiles/sausages.dir
-/home/ttchef/coding/c/tanks/CMakeFiles/edit_cache.dir
-/home/ttchef/coding/c/tanks/CMakeFiles/rebuild_cache.dir

@@ -1,1 +1,0 @@
-/usr/bin/cc -Wl,--dependency-file=CMakeFiles/arc.dir/link.d CMakeFiles/arc.dir/tools/arc.c.o CMakeFiles/arc.dir/core_archive.c.o -o arc

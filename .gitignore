@@ -2,3 +2,6 @@
 tanks
 *.json
 .cache/
+*.cmake
+CMakeFiles/
+CMakeCache.txt

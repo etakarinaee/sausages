@@ -1,1 +1,0 @@
-/usr/bin/cc -Wl,--dependency-file=CMakeFiles/sausages.dir/link.d CMakeFiles/sausages.dir/core.c.o CMakeFiles/sausages.dir/core_archive.c.o CMakeFiles/sausages.dir/core_lua.c.o CMakeFiles/sausages.dir/core_lua_api.c.o CMakeFiles/sausages.dir/core_renderer.c.o CMakeFiles/sausages.dir/glad.c.o -o sausages  -lGL -lglfw -lluajit-5.1 -lm -ldl
