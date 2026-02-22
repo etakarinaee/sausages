@@ -52,6 +52,20 @@ static int print(lua_State *L) {
     return 0;
 }
 
+static int get_screen_dimensions(lua_State *L) {
+    int width, height;
+    glfwGetWindowSize(ctx.window, &width, &height);
+    
+    lua_newtable(L);
+    lua_pushinteger(L, width);
+    lua_setfield(L, -2, "width");
+
+    lua_pushinteger(L, height);
+    lua_setfield(L, -2, "height");
+
+    return 1;
+}
+
 static int push_quad(lua_State *L) {
     const struct vec2 pos = check_vec2(L, 1);
     const struct color3 color = check_color3(L, 2);
@@ -118,6 +132,7 @@ static int mouse_pos(lua_State *L) {
 static const luaL_Reg api[] = {
     {"quit", quit},
     {"print", print},
+    {"get_screen_dimensions", get_screen_dimensions},
 
     /* Render */
     {"push_quad", push_quad},

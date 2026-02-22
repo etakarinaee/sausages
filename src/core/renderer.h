@@ -51,7 +51,6 @@ struct render_context {
 };
 
 extern struct render_context ctx;
-extern GLFWwindow *window;
 
 int renderer_init(struct render_context *r);
 void renderer_deinit(const struct render_context *r);
