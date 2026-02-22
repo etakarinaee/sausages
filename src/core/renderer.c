@@ -10,11 +10,11 @@
 struct render_context ctx;
 
 static const float rectangle_vertices[] = {
-    /* POS           UV           TEXCOORD */
-    0.5f, 0.5f,     1.0f, 1.0f,  1.0f, 1.0f,
-    0.5f, -0.5f,    1.0f, 0.0f,  1.0f, 0.0f,
-    -0.5f, -0.5f,   0.0f, 0.0f,  0.0f, 0.0f,
-    -0.5f, 0.5f,    0.0f, 1.0f,  0.0f, 1.0f,
+    /* POS           UV     */     
+    0.5f, 0.5f,     1.0f, 1.0f,  
+    0.5f, -0.5f,    1.0f, 0.0f,  
+    -0.5f, -0.5f,   0.0f, 0.0f,  
+    -0.5f, 0.5f,    0.0f, 1.0f,
 };
 
 static const unsigned int rectangle_indices[] = {
@@ -34,14 +34,11 @@ static void buffers_init(struct render_context *r) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rectangle_indices), rectangle_indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(2 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
-
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(4 * sizeof(float)));
-    glEnableVertexAttribArray(2);
 }
 
 static int program_init(const char *vert_path, const char *frag_path, GLuint *program) {
@@ -129,6 +126,9 @@ int renderer_init(struct render_context *r) {
         return 1;
     }
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
     r->quads = calloc(2, sizeof(struct quad_data));
     r->quads_count = 0;
     r->quads_capacity = 2;
@@ -167,8 +167,21 @@ void renderer_draw(struct render_context *r) {
     for (size_t i = 0; i < r->quads_count; i++) {
         const struct quad_data *data = &r->quads[i];
 
+        /* TODO: Make this clean */
+        struct matrix translate_m;
+        math_matrix_translate(&translate_m, data->pos.x, data->pos.y, 0.0f);
+
+        struct matrix scale_m;
+        math_matrix_scale(&scale_m, data->scale, data->scale, data->scale);
+
+        struct matrix rotate_m;
+        math_matrix_rotate_2d(&rotate_m, data->rotation);
+
+        struct matrix scale_rot_m;
+        math_matrix_mul(&scale_rot_m, &scale_m, &rotate_m);
+
         struct matrix m;
-        math_matrix_translate(&m, data->pos.x, data->pos.y, 0.0f);
+        math_matrix_mul(&m, &translate_m, &scale_rot_m);
 
         GLint uniform_matrix_loc;
         if (data->tex == CORE_RENDERER_QUAD_NO_TEXTURE) {
@@ -177,9 +190,13 @@ void renderer_draw(struct render_context *r) {
             const GLint uniform_color_loc = glGetUniformLocation(r->quad_program, "u_color");
             glUniform3f(uniform_color_loc, data->color.r, data->color.g, data->color.b);
         } else {
-            glBindTexture(GL_TEXTURE_2D, data->tex);
             glUseProgram(r->tex_program);
             uniform_matrix_loc = glGetUniformLocation(r->tex_program, "u_matrix");
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, data->tex);
+            GLint sampler_loc = glGetUniformLocation(r->tex_program, "u_texture");
+            glUniform1i(sampler_loc, 0);
         }
 
         glUniformMatrix4fv(uniform_matrix_loc, 1, GL_FALSE, m.m);
@@ -194,9 +211,10 @@ texture_id renderer_load_texture(const char *path) {
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     stbi_set_flip_vertically_on_load(1);
@@ -235,4 +253,27 @@ void math_matrix_scale(struct matrix *m, const float x, const float y, const flo
     *m = (struct matrix){ .m = {
         [0] = x, [5] = y, [10] = z, [15] = 1.0f
     }};
+}
+
+void math_matrix_rotate_2d(struct matrix *m, float angle) {
+    float theta = DEG2RAD(angle);
+
+    *m = (struct matrix){ .m = {
+        [0] = cos(theta), [1] = -sin(theta), 
+        [4] = sin(theta), [5] = cos(theta),
+        [10] = 1.0f, [15] = 1.0f,
+    }};
+}
+
+/* TODO: probaly optimize or smth */
+void math_matrix_mul(struct matrix *out, struct matrix *a, struct matrix *b) {
+    for (int r = 0; r < 4; r++) {
+        for (int c = 0; c < 4; c++) {
+            float sum = 0.0f;
+            for (int k = 0; k < 4; k++) {
+                sum += a->m[k * 4 + r] * b->m[c * 4 + k];
+            }
+            out->m[c * 4 + r] = sum;
+        }
+    }
 }

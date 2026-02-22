@@ -39,7 +39,7 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
-    GLFWwindow *window = glfwCreateWindow(1200, 800, "Sausages", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1200, 800, "Sausages", NULL, NULL);
     if (!window) {
         fprintf(stderr, "failed to create window\n");
         glfwTerminate();
@@ -96,19 +96,6 @@ int main(void) {
 
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-
-        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-            double x, y;
-            glfwGetCursorPos(window, &x, &y);
-
-            const struct vec2 pos = {
-                .x = (float) (x / ctx.width * 2.0 - 1.0),
-                .y = (float) -(y / ctx.height * 2.0 - 1.0)
-            };
-            const struct color3 color = {.r = 1.0f, .g = 1.0f, .b = 1.0f};
-
-            renderer_push_quad(&ctx, pos, 1.0f, 0.0f, color, tex);
-        }
 
         renderer_draw(&ctx);
 
