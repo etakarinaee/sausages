@@ -4,14 +4,22 @@
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 #include <stdlib.h>
+#include <luajit-2.1/lua.h>
 
 #include "core_archive.h"
+#include "core_lua.h"
 
 /* where the game data is stored */
 #define SAUSAGES_DATA "sausages.arc"
+/* entrypoint in lua */
+#define SAUSAGES_ENTRY "game.lua"
 
 GLuint tri_program;
 GLuint vao, vbo;
+
+static lua_State *L;
+/* for delta time calculation */
+static int last_time;
 
 GLuint compile_shader(GLenum type, const char *s) {
     int success;
@@ -50,7 +58,7 @@ GLuint create_shader_program(void) {
     /* infoLog */
     char buf[512];
     char *tri_vertex, *tri_fragment;
-    
+
     tri_vertex = archive_read_alloc(SAUSAGES_DATA, "tri.vert", &len);
     if (!tri_vertex) {
         exit(1);
@@ -91,9 +99,21 @@ void quit(void) {
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteProgram(tri_program);
+    lua_quit(L);
 }
 
 void display(void) {
+    int now;
+    double delta_time;
+
+    now = glutGet(GLUT_ELAPSED_TIME);
+    delta_time = (now - last_time) / 1000.0;
+    last_time = now;
+
+    L = lua_reload(L, SAUSAGES_DATA, SAUSAGES_ENTRY);
+
+    lua_call_update(L, delta_time);
+
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(tri_program);
@@ -101,6 +121,7 @@ void display(void) {
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
     glutSwapBuffers();
+    glutPostRedisplay();
 }
 
 void reshape(int w, int h) {
@@ -120,7 +141,7 @@ int main(int argc, char **argv) {
     fclose(test);
 
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize(1280, 720);
     glutCreateWindow("Sausages");
 
@@ -138,31 +159,43 @@ int main(int argc, char **argv) {
     glClearColor(0.f, 0.f, 0.f, 0.f);
     tri_program = create_shader_program();
 
-    const float vertices[] = {
-        -.5f, -.5f, 1.f, 0.f, 0.f,
-        .5f, -.5f, 0.f, 1.f, 0.f,
-        0.f, .5f, 0.f, 0.f, 1.f,
-    };
+    {
+        const float vertices[] = {
+            -.5f, -.5f, 1.f, 0.f, 0.f,
+            .5f, -.5f, 0.f, 1.f, 0.f,
+            0.f, .5f, 0.f, 0.f, 1.f,
+        };
 
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
 
-    glBindVertexArray(vao);
+        glBindVertexArray(vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
 
-    /* TODO: make this more readable */
+        /* TODO: make this more readable */
 
-    /* position at location 0 */
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+        /* position at location 0 */
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+        glEnableVertexAttribArray(0);
 
-    /* color at location 1 */
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
+        /* color at location 1 */
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (2 * sizeof(float)));
+        glEnableVertexAttribArray(1);
 
-    glBindVertexArray(0);
+        glBindVertexArray(0);
+    }
+
+    L = lua_init(SAUSAGES_DATA, SAUSAGES_ENTRY);
+    if (!L) {
+        fprintf(stderr, "lua_init()\n");
+
+        return 1;
+    }
+
+    lua_call_init(L);
+    last_time = glutGet(GLUT_ELAPSED_TIME);
 
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
@@ -172,4 +205,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-

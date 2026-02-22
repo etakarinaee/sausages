@@ -10,12 +10,13 @@ add_custom_command(
         COMMAND arc c ${CMAKE_BINARY_DIR}/sausages.arc
         ${CMAKE_SOURCE_DIR}/shaders/tri.frag
         ${CMAKE_SOURCE_DIR}/shaders/tri.vert
-        DEPENDS arc shaders/tri.frag shaders/tri.vert
+        ${CMAKE_SOURCE_DIR}/game.lua
+        DEPENDS arc shaders/tri.frag shaders/tri.vert game.lua
 )
 
 add_custom_target(shaders ALL DEPENDS ${CMAKE_BINARY_DIR}/sausages.arc)
 
-add_executable(sausages core.c core_archive.c)
+add_executable(sausages core.c core_archive.c core_lua.c core_lua_api.c)
 add_dependencies(sausages shaders)
 
-target_link_libraries(sausages GL GLU GLEW glut)
+target_link_libraries(sausages GL GLU GLEW glut luajit-5.1 m dl)
