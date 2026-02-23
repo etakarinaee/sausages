@@ -1,4 +1,5 @@
 local client = nil
+local physics = require('physics')
 
 local player = {
     x = 0.0,
@@ -14,6 +15,8 @@ local player = {
     -- TODO: get rid of that ugly bool
     on_ground = false,
 }
+
+local platform = { x = 0.0, y = -0.5, w = 1.5, h = 0.1 }
 
 local gravity = -2.0
 local force = 1.0
@@ -40,6 +43,16 @@ function game_update(delta_time)
         ev = client:poll()
     end
 
+    player.on_ground = false
+
+    if physics.aabb_overlap(player.x, player.y, player.w, player.h, platform.x, platform.y, platform.w, platform.h) then
+        if player.vy <= 0 then
+            player.y = platform.y + platform.h/2 + player.h/2
+            player.vy = 0
+            player.on_ground = true
+        end
+    end
+
     if core.key_down(key.a) then
         player.vx = player.vx - speed * delta_time
     end
@@ -57,6 +70,8 @@ function game_update(delta_time)
     if player.y < -1.2 then
         player.x, player.y, player.vx, player.vy = 0.0, 0.5, 0.0, 0.0
     end
+
+    core.push_quad({platform.x, platform.y}, platform.w, platform.h, {0.3, 0.7, 0.3}, -1);
 
     core.push_quad({player.x, player.y}, player.w, player.h, {0.9, 0.2, 0.2}, -1)
 end
