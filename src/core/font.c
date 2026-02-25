@@ -47,11 +47,16 @@ static void load_char(FT_Face* face, char c) {
     FT_Outline* outline = &(*face)->glyph->outline;
 
     for (int i = 0; i < outline->n_points; i++) {
-        if (outline->tags[i] & FT_CURVE_TAG_ON) {
+        if (outline->tags[i] & 1) {
             printf("%c: on ", c);
         }
         else {
-            printf("%c: off ", c);
+            if (outline->tags[i] & 3) {
+                printf("%c: off cubic ", c);
+            }
+            else {
+                printf("%c: off quadratic ", c);
+            }
         }
 
         printf("%ld %ld\n", outline->points[i].x, outline->points[i].y);
