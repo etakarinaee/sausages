@@ -25,9 +25,13 @@ set(ARC_INPUTS
         ${CMAKE_SOURCE_DIR}/src/core/shaders/texture.frag
         ${CMAKE_SOURCE_DIR}/src/core/shaders/text.vert
         ${CMAKE_SOURCE_DIR}/src/core/shaders/text.frag
+
         ${CMAKE_SOURCE_DIR}/src/game/client.lua
         ${CMAKE_SOURCE_DIR}/src/game/server.lua
         ${CMAKE_SOURCE_DIR}/src/game/physics.lua
+
+        ${CMAKE_SOURCE_DIR}/data/locales/en.txt
+        ${CMAKE_SOURCE_DIR}/data/locales/ru.txt
 )
 
 add_custom_command(
@@ -48,6 +52,7 @@ set(CORE_SOURCES
         src/core/renderer.c
         src/core/net.c
         src/core/cmath.c
+        src/core/local.c
 )
 
 # Freetype2

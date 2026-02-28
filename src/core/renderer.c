@@ -9,7 +9,7 @@
 
 #include <stbi/stb_image.h>
 
-struct render_context ctx;
+struct render_context render_context;
 
 static const float rectangle_vertices[] = {
     /* POS           UV     */     
@@ -461,7 +461,7 @@ static uint8_t* font_get_atlas(const char* path, int font_size, struct vec2i cha
 
     FT_Face face;
 
-    FT_Error error = FT_New_Face(ctx.ft_lib, path, 0, &face);
+    FT_Error error = FT_New_Face(render_context.ft_lib, path, 0, &face);
     if (error == FT_Err_Unknown_File_Format) {
         fprintf(stderr, "unkown format: %s\n", path);
         free(data);

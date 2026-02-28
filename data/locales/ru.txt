@@ -1,0 +1,2 @@
+# this placeholder is used to check that the localization is working correctly
+placeholder = Привет, Мир!
