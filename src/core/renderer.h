@@ -65,6 +65,7 @@ struct font {
     texture_id tex;
     int atlas_width;
     int atlas_height;
+    int font_size;
 };
 
 struct camera {
@@ -110,6 +111,6 @@ void renderer_push_text(struct render_context *r, struct vec2 pos, float scale, 
 void renderer_draw(struct render_context *r);
 
 texture_id renderer_load_texture(const char *path);
-font_id renderer_load_font(struct render_context *r, const char* path);
+font_id renderer_load_font(struct render_context *r, const char* path, int font_size, struct vec2i char_range);
 
 #endif

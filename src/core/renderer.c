@@ -237,7 +237,7 @@ static void renderer_push_char(struct render_context *r, struct vec2 pos, struct
 void renderer_push_text(struct render_context *r, struct vec2 pos, float pixel_height, struct color3 text_color, font_id font, const char *text) {
     struct font *f = &r->fonts[font];
 
-    int font_pixel_size = 48; /* TODO: fix for differeent altas sizes */
+    int font_pixel_size = f->font_size; /* TODO: fix for differeent altas sizes */
     float scale = pixel_height / (float)font_pixel_size;
 
     float pos_x = pos.x;
@@ -391,17 +391,17 @@ texture_id renderer_load_texture(const char *path) {
     return (texture_id)texture;
 }
 
-static uint8_t* font_get_atlas(const char* path, int *width, int *height, struct font* font) {
+static uint8_t* font_get_atlas(const char* path, int font_size, struct vec2i char_range, int *width, int *height, struct font* font) {
     if (!path) return NULL;
 
     // TODO: make the loading chars not constant
-    font->char_range = (struct vec2i){'0', '~'};
+    font->char_range = char_range;
     const int chars_count = font->char_range.y - font->char_range.x + 1;
     if (chars_count < 0) return NULL;
 
     font->chars = malloc(chars_count * sizeof(struct character));
 
-    const int char_len = 48;
+    const int char_len = font_size;
     const int chars_per_line = 26;
 
     *width = char_len * chars_per_line;
@@ -433,7 +433,7 @@ static uint8_t* font_get_atlas(const char* path, int *width, int *height, struct
     error = FT_Set_Pixel_Sizes(face, 0, char_len);
 
     int index = 0;
-    for (uint8_t c = '0'; c <= '~'; c++) {
+    for (uint8_t c = font->char_range.x; c <= font->char_range.y; c++) {
         if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
             fprintf(stderr, "failed loading char: %c in: %s\n", c, path);
             continue;
@@ -448,7 +448,17 @@ static uint8_t* font_get_atlas(const char* path, int *width, int *height, struct
                 int dst_x = cell_x + x;
                 int dst_y = cell_y + y;
 
-                int dst_index = dst_y * (chars_per_line * char_len) + dst_x;
+                /* Overflow due to glyph being larger than cell in this case the 
+                    glyph will just be a little weird at the momemnt but it shouldnt 
+                    really be that visible */
+                if (dst_x >= *width) {
+                    continue;
+                }
+                if (dst_y >= *height) {
+                    continue;
+                }
+
+                int dst_index = dst_y * (*width) + dst_x;
                 data[dst_index] = face->glyph->bitmap.buffer[y * face->glyph->bitmap.width + x];
             }
         }
@@ -472,7 +482,7 @@ static uint8_t* font_get_atlas(const char* path, int *width, int *height, struct
     return data;
 }
 
-font_id renderer_load_font(struct render_context *r, const char *path) {
+font_id renderer_load_font(struct render_context *r, const char *path, int font_size, struct vec2i char_range) {
     if (r->fonts_count + 1 >= r->fonts_capacity) {
         size_t new_cap = r->fonts_capacity *= 2;
         struct font* new_data = realloc(r->fonts, new_cap * sizeof(struct font));
@@ -486,9 +496,10 @@ font_id renderer_load_font(struct render_context *r, const char *path) {
     }
     r->fonts_count++;
     int font_index = r->fonts_count - 1;
+    r->fonts[font_index].font_size = font_size;
 
     int width, height;
-    uint8_t* data = font_get_atlas(path, &width, &height, &r->fonts[font_index]);
+    uint8_t* data = font_get_atlas(path, font_size, char_range, &width, &height, &r->fonts[font_index]);
     if (!data) return -1;
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);

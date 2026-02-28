@@ -9,6 +9,7 @@
 
 #include "archive.h"
 #include "net.h"
+#include "cmath.h"
 
 // metatables
 #define SERVER_MT "net_server"
@@ -24,6 +25,21 @@ static struct vec2 check_vec2(lua_State *L, const int idx) {
 
     lua_rawgeti(L, idx, 2);
     v.y = (float) luaL_checknumber(L, -1);
+    lua_pop(L, 1);
+
+    return v;
+}
+
+static struct vec2i check_vec2i(lua_State *L, const int idx) {
+    struct vec2i v;
+    luaL_checktype(L, idx, LUA_TTABLE);
+
+    lua_rawgeti(L, idx, 1);
+    v.x = (float) luaL_checkint(L, -1);
+    lua_pop(L, 1);
+
+    lua_rawgeti(L, idx, 2);
+    v.y = (float) luaL_checkint(L, -1);
     lua_pop(L, 1);
 
     return v;
@@ -134,7 +150,11 @@ static int l_load_texture(lua_State *L) {
 }
 
 static int l_load_font(lua_State *L) {
-    const font_id font = renderer_load_font(&ctx, luaL_checkstring(L, 1));
+    const char* text = luaL_checkstring(L, 1);
+    const int font_size = luaL_checkint(L, 2);
+    const struct vec2i range = check_vec2i(L, 3);
+
+    const font_id font = renderer_load_font(&ctx,text, font_size, range);
     lua_pushinteger(L, font);
     return 1;
 }

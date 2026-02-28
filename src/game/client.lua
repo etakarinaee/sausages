@@ -37,7 +37,7 @@ local function deserialize_position(data)
 end
 
 local image = core.load_texture("../test.png")
-local font = core.load_font("../AdwaitaSans-Regular.ttf")
+local font = core.load_font("../AdwaitaSans-Regular.ttf", 200, {32, 128})
 local angle = 0.0
 
 local pos_x = 0.0
