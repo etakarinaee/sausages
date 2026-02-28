@@ -506,7 +506,7 @@ static uint8_t* font_get_atlas(const char* path, int font_size, struct vec2i cha
                 }
 
                 int dst_index = dst_y * (*width) + dst_x;
-                data[dst_index] = face->glyph->bitmap.buffer[y * face->glyph->bitmap.width + x];
+                data[dst_index] = face->glyph->bitmap.buffer[y * face->glyph->bitmap.pitch + x];
             }
         }
 
