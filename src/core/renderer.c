@@ -253,7 +253,7 @@ void renderer_push_text(struct render_context *r, struct vec2 pos, float pixel_h
         };
 
         struct vec2 glyph_pos = {
-            .x = pos_x * scale,
+            .x = pos_x + ch->bearing.x * scale,
             .y = baseline_y - ((font_pixel_size - ch->size.y) * scale * 0.5f) - (ch->size.y - ch->bearing.y) * scale,
         };
 
@@ -446,8 +446,6 @@ static uint8_t* font_get_atlas(const char* path, int *width, int *height, struct
                 int dst_y = cell_y + y;
 
                 int dst_index = dst_y * (chars_per_line * char_len) + dst_x;
-                uint32_t flipped_y = face->glyph->bitmap.rows - 1 - y;
-
                 data[dst_index] = face->glyph->bitmap.buffer[y * face->glyph->bitmap.width + x];
             }
         }

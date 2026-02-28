@@ -99,7 +99,7 @@ int main(void) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         renderer_push_rect(&ctx, (struct vec2){-ctx.width * 0.5f + 60, -ctx.height * 0.5f + 60}, (struct vec2){100, 100}, 0.0f, (struct color3){0.0f, 1.0f, 0.0f});
-        renderer_push_text(&ctx, (struct vec2){0, 0}, 48.0f, (struct color3){1.0f, 0.0f, 1.0f}, id, "Hello World");
+        renderer_push_text(&ctx, (struct vec2){0, 0}, 48.0f, (struct color3){1.0f, 0.0f, 1.0f}, id, "gijdky");
         renderer_draw(&ctx);
 
         glfwSwapBuffers(window);
