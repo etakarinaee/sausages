@@ -46,6 +46,12 @@ local pos_y = 0.0
 local speed = 300.0
 
 function game_init()
+    core.local_load("en.txt")
+    core.print(core.local_get("placeholder"))
+
+    core.local_load("ru.txt")
+    core.print(core.local_get("placeholder"))
+
     client = core.client.new("127.0.0.1", 7777)
 end
 

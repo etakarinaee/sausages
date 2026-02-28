@@ -1,4 +1,3 @@
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -9,6 +8,7 @@
 #include <luajit-2.1/lua.h>
 
 #include "archive.h"
+#include "local.h"
 #include "lua.h"
 #include "renderer.h"
 
@@ -40,7 +40,7 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
-    GLFWwindow* window = glfwCreateWindow(1200, 800, "Sausages", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(1200, 800, "Sausages", NULL, NULL);
     if (!window) {
         fprintf(stderr, "failed to create window\n");
         glfwTerminate();
@@ -53,15 +53,15 @@ int main(void) {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
 
-    ctx = (struct render_context){.width = width, .height = height, .window = window};
+    render_context = (struct render_context){.width = width, .height = height, .window = window};
     glViewport(0, 0, width, height);
 
     printf("OpenGL %s\n", (const char *) glGetString(GL_VERSION));
 
     glfwSetFramebufferSizeCallback(window, resize_callback);
-    glfwSetWindowUserPointer(window, &ctx);
+    glfwSetWindowUserPointer(window, &render_context);
 
-    renderer_init(&ctx);
+    renderer_init(&render_context);
 
     L = lua_init(SAUSAGES_DATA, ENTRY);
     if (!L) {
@@ -98,7 +98,7 @@ int main(void) {
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        renderer_draw(&ctx);
+        renderer_draw(&render_context);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -108,14 +108,14 @@ int main(void) {
         const double frame_end = glfwGetTime();
         const double elapsed = frame_end - current_time;
         if (elapsed < 1.0 / 240.0) {
-            usleep((unsigned int)((1.0 / 240.0 - elapsed) * 1e6));
+            usleep((unsigned int) ((1.0 / 240.0 - elapsed) * 1e6));
         }
     }
 #endif
 
-    renderer_deinit(&ctx);
+    renderer_deinit(&render_context);
     lua_quit(L);
-    glfwDestroyWindow(ctx.window);
+    glfwDestroyWindow(render_context.window);
     glfwTerminate();
 
     return EXIT_SUCCESS;

@@ -97,7 +97,7 @@ struct render_context {
     size_t quads_capacity;
 };
 
-extern struct render_context ctx;
+extern struct render_context render_context;
 
 int renderer_init(struct render_context *r);
 void renderer_deinit(const struct render_context *r);

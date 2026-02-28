@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h> /* after renderer because renderer includes glad which muss be included after glfw */
 
 #include "archive.h"
+#include "local.h"
 #include "net.h"
 
 // metatables
@@ -61,7 +62,7 @@ static int l_print(lua_State *L) {
 
 static int l_get_screen_dimensions(lua_State *L) {
     int width, height;
-    glfwGetWindowSize(ctx.window, &width, &height);
+    glfwGetWindowSize(render_context.window, &width, &height);
 
     lua_newtable(L);
     lua_pushinteger(L, width);
@@ -78,7 +79,7 @@ static int l_push_rect(lua_State *L) {
     const struct vec2 scale = check_vec2(L, 2);
     const struct color3 color = check_color3(L, 3);
 
-    renderer_push_rect(&ctx, pos, scale, 0.0f, color);
+    renderer_push_rect(&render_context, pos, scale, 0.0f, color);
 
     return 0;
 }
@@ -89,7 +90,7 @@ static int l_push_rect_ex(lua_State *L) {
     const float rotation = luaL_checknumber(L, 3);
     const struct color3 color = check_color3(L, 4);
 
-    renderer_push_rect(&ctx, pos, scale, rotation, color);
+    renderer_push_rect(&render_context, pos, scale, rotation, color);
 
     return 0;
 }
@@ -99,7 +100,7 @@ static int l_push_texture(lua_State *L) {
     const struct vec2 scale = check_vec2(L, 2);
     const texture_id tex = luaL_checkint(L, 3);
 
-    renderer_push_texture(&ctx, pos, scale, 0.0f, tex);
+    renderer_push_texture(&render_context, pos, scale, 0.0f, tex);
 
     return 0;
 }
@@ -110,19 +111,19 @@ static int l_push_texture_ex(lua_State *L) {
     const float rotation = luaL_checknumber(L, 3);
     const texture_id tex = luaL_checkint(L, 4);
 
-    renderer_push_texture(&ctx, pos, scale, rotation, tex);
+    renderer_push_texture(&render_context, pos, scale, rotation, tex);
 
     return 0;
 }
 
 static int l_push_text(lua_State *L) {
     const int font = luaL_checkint(L, 1);
-    const char* text = luaL_checkstring(L, 2);
+    const char *text = luaL_checkstring(L, 2);
     const struct vec2 pos = check_vec2(L, 3);
     float scale = luaL_checknumber(L, 4);
     const struct color3 color = check_color3(L, 5);
-    
-    renderer_push_text(&ctx, pos, scale, color, font, text);
+
+    renderer_push_text(&render_context, pos, scale, color, font, text);
 
     return 0;
 }
@@ -134,13 +135,13 @@ static int l_load_texture(lua_State *L) {
 }
 
 static int l_load_font(lua_State *L) {
-    const font_id font = renderer_load_font(&ctx, luaL_checkstring(L, 1));
+    const font_id font = renderer_load_font(&render_context, luaL_checkstring(L, 1));
     lua_pushinteger(L, font);
     return 1;
 }
 
 static int l_key_pressed(lua_State *L) {
-    if (glfwGetKey(ctx.window, luaL_checkint(L, 1)) == GLFW_PRESS) {
+    if (glfwGetKey(render_context.window, luaL_checkint(L, 1)) == GLFW_PRESS) {
         lua_pushinteger(L, 1);
         return 1;
     }
@@ -148,7 +149,7 @@ static int l_key_pressed(lua_State *L) {
 }
 
 static int l_key_down(lua_State *L) {
-    if (glfwGetKey(ctx.window, luaL_checkint(L, 1)) != GLFW_RELEASE) {
+    if (glfwGetKey(render_context.window, luaL_checkint(L, 1)) != GLFW_RELEASE) {
         lua_pushinteger(L, 1);
         return 1;
     }
@@ -156,7 +157,7 @@ static int l_key_down(lua_State *L) {
 }
 
 static int l_mouse_pressed(lua_State *L) {
-    if (glfwGetMouseButton(ctx.window, luaL_checkint(L, 1)) == GLFW_PRESS) {
+    if (glfwGetMouseButton(render_context.window, luaL_checkint(L, 1)) == GLFW_PRESS) {
         lua_pushinteger(L, 1);
         return 1;
     }
@@ -164,7 +165,7 @@ static int l_mouse_pressed(lua_State *L) {
 }
 
 static int l_mouse_down(lua_State *L) {
-    if (glfwGetMouseButton(ctx.window, luaL_checkint(L, 1)) != GLFW_RELEASE) {
+    if (glfwGetMouseButton(render_context.window, luaL_checkint(L, 1)) != GLFW_RELEASE) {
         lua_pushinteger(L, 1);
         return 1;
     }
@@ -174,7 +175,7 @@ static int l_mouse_down(lua_State *L) {
 static int l_mouse_pos(lua_State *L) {
     double x;
     double y;
-    glfwGetCursorPos(ctx.window, &x, &y);
+    glfwGetCursorPos(render_context.window, &x, &y);
 
     lua_newtable(L);
     lua_pushnumber(L, x);
@@ -373,6 +374,31 @@ static void meta(lua_State *L, const char *name, const luaL_Reg *methods) {
     lua_pop(L, 1);
 }
 
+static int l_local_load(lua_State *L) {
+    const char *locale = luaL_checkstring(L, 1);
+
+    if (local_load(locale) != 0) {
+        return luaL_error(L, "core.local_load: no locale %s", locale);
+    }
+
+    return 0;
+}
+
+static int l_local_get(lua_State *L) {
+    const char *key = luaL_checkstring(L, 1);
+    const char *value = local_get(key);
+
+    lua_pushstring(L, value);
+
+    return 1;
+}
+
+static int l_local_current_locale(lua_State *L) {
+    const char *locale = local_current_locale();
+    lua_pushstring(L, locale);
+
+    return 1;
+}
 
 static const luaL_Reg api[] = {
     {"quit", l_quit},
@@ -388,6 +414,11 @@ static const luaL_Reg api[] = {
     {"load_texture", l_load_texture},
     {"load_font", l_load_font},
     {"get_screen_dimensions", l_get_screen_dimensions},
+
+    /* localization */
+    {"local_load", l_local_load},
+    {"local_get", l_local_get},
+    {"local_current_locale", l_local_current_locale},
 
     /* Input */
     {"key_pressed", l_key_pressed},
