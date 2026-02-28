@@ -73,14 +73,56 @@ static int l_get_screen_dimensions(lua_State *L) {
     return 1;
 }
 
-static int l_push_quad(lua_State *L) {
+static int l_push_rect(lua_State *L) {
     const struct vec2 pos = check_vec2(L, 1);
-    const float scale_x = (float) luaL_checknumber(L, 2);
-    const float scale_y = (float) luaL_checknumber(L, 3);
-    const struct color3 color = check_color3(L, 4);
-    const texture_id tex = (texture_id) luaL_checkinteger(L, 5);
+    const struct vec2 scale = check_vec2(L, 2);
+    const struct color3 color = check_color3(L, 3);
 
-    renderer_push_quad(&ctx, pos, scale_x, scale_y, 0.0f, color, tex);
+    renderer_push_rect(&ctx, pos, scale, 0.0f, color);
+
+    return 0;
+}
+
+static int l_push_rect_ex(lua_State *L) {
+    const struct vec2 pos = check_vec2(L, 1);
+    const struct vec2 scale = check_vec2(L, 2);
+    const float rotation = luaL_checknumber(L, 3);
+    const struct color3 color = check_color3(L, 4);
+
+    renderer_push_rect(&ctx, pos, scale, rotation, color);
+
+    return 0;
+}
+
+static int l_push_texture(lua_State *L) {
+    const struct vec2 pos = check_vec2(L, 1);
+    const struct vec2 scale = check_vec2(L, 2);
+    const texture_id tex = luaL_checkint(L, 3);
+
+    renderer_push_texture(&ctx, pos, scale, 0.0f, tex);
+
+    return 0;
+}
+
+static int l_push_texture_ex(lua_State *L) {
+    const struct vec2 pos = check_vec2(L, 1);
+    const struct vec2 scale = check_vec2(L, 2);
+    const float rotation = luaL_checknumber(L, 3);
+    const texture_id tex = luaL_checkint(L, 4);
+
+    renderer_push_texture(&ctx, pos, scale, rotation, tex);
+
+    return 0;
+}
+
+static int l_push_text(lua_State *L) {
+    const int font = luaL_checkint(L, 1);
+    const char* text = luaL_checkstring(L, 2);
+    const struct vec2 pos = check_vec2(L, 3);
+    float scale = luaL_checknumber(L, 4);
+    const struct color3 color = check_color3(L, 5);
+    
+    renderer_push_text(&ctx, pos, scale, color, font, text);
 
     return 0;
 }
@@ -88,6 +130,12 @@ static int l_push_quad(lua_State *L) {
 static int l_load_texture(lua_State *L) {
     const texture_id tex = renderer_load_texture(luaL_checkstring(L, 1));
     lua_pushinteger(L, tex);
+    return 1;
+}
+
+static int l_load_font(lua_State *L) {
+    const font_id font = renderer_load_font(&ctx, luaL_checkstring(L, 1));
+    lua_pushinteger(L, font);
     return 1;
 }
 
@@ -331,8 +379,14 @@ static const luaL_Reg api[] = {
     {"print", l_print},
 
     /* Render */
-    {"push_quad", l_push_quad},
+    {"push_rect", l_push_rect},
+    {"push_rect_ex", l_push_rect_ex},
+    {"push_texture", l_push_texture},
+    {"push_texture_ex", l_push_texture_ex},
+    {"push_text", l_push_text},
+
     {"load_texture", l_load_texture},
+    {"load_font", l_load_font},
     {"get_screen_dimensions", l_get_screen_dimensions},
 
     /* Input */

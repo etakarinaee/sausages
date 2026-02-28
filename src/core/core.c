@@ -1,3 +1,4 @@
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -60,6 +61,8 @@ int main(void) {
     glfwSetFramebufferSizeCallback(window, resize_callback);
     glfwSetWindowUserPointer(window, &ctx);
 
+    renderer_init(&ctx);
+
     L = lua_init(SAUSAGES_DATA, ENTRY);
     if (!L) {
         fprintf(stderr, "lua_init() failed\n");
@@ -67,10 +70,6 @@ int main(void) {
         return EXIT_FAILURE;
     }
     lua_call_init(L);
-
-    renderer_init(&ctx);
-
-    const texture_id tex = renderer_load_texture("../test.png");
 
 #ifdef SERVER
     double last_time = glfwGetTime();
@@ -116,6 +115,7 @@ int main(void) {
 
     renderer_deinit(&ctx);
     lua_quit(L);
+    glfwDestroyWindow(ctx.window);
     glfwTerminate();
 
     return EXIT_SUCCESS;

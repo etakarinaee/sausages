@@ -23,6 +23,8 @@ set(ARC_INPUTS
         ${CMAKE_SOURCE_DIR}/src/core/shaders/quad.frag
         ${CMAKE_SOURCE_DIR}/src/core/shaders/texture.vert
         ${CMAKE_SOURCE_DIR}/src/core/shaders/texture.frag
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/text.vert
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/text.frag
         ${CMAKE_SOURCE_DIR}/src/game/client.lua
         ${CMAKE_SOURCE_DIR}/src/game/server.lua
         ${CMAKE_SOURCE_DIR}/src/game/physics.lua
@@ -45,22 +47,30 @@ set(CORE_SOURCES
         src/core/lua_api.c
         src/core/renderer.c
         src/core/net.c
+        src/core/cmath.c
 )
 
-set(CORE_FLAGS -pedantic-errors -Wall -Wextra)
-set(CORE_LIBS glad stbi GL glfw luajit-5.1 m dl)
+# Freetype2
+find_package(Freetype REQUIRED)
+
+
+set(CORE_FLAGS -g -pedantic-errors -Wall -Wextra -fsanitize=address)
+set(CORE_LIBS glad stbi GL glfw freetype luajit-5.1 m dl)
 
 # client
 add_executable(client ${CORE_SOURCES})
 target_compile_options(client PRIVATE ${CORE_FLAGS})
-target_include_directories(client PRIVATE ${CMAKE_SOURCE_DIR}/lib)
+target_include_directories(client PRIVATE ${CMAKE_SOURCE_DIR}/lib /usr/include/freetype2/)
 target_link_libraries(client ${CORE_LIBS})
+target_link_options(client PRIVATE -fsanitize=address) # Beccause link with asan
 add_dependencies(client pack_assets)
 
 # server
 add_executable(server ${CORE_SOURCES})
 target_compile_definitions(server PRIVATE SERVER)
 target_compile_options(server PRIVATE ${CORE_FLAGS})
-target_include_directories(server PRIVATE ${CMAKE_SOURCE_DIR}/lib)
+target_include_directories(server PRIVATE ${CMAKE_SOURCE_DIR}/lib /usr/include/freetype2/)
 target_link_libraries(server ${CORE_LIBS})
+target_link_options(server PRIVATE -fsanitize=address) # Because link with asan
 add_dependencies(server pack_assets)
+
