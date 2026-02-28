@@ -1,3 +1,4 @@
+
 #include "renderer.h"
 #include "archive.h"
 #include "freetype/freetype.h"
@@ -230,22 +231,35 @@ static void renderer_push_char(struct render_context *r, struct vec2 pos, struct
     renderer_push_quad(r, data);
 }
 
-void renderer_push_text(struct render_context *r, struct vec2 pos, float scale, struct color3 text_color, font_id font, const char *text) {
+void renderer_push_text(struct render_context *r, struct vec2 pos, float pixel_height, struct color3 text_color, font_id font, const char *text) {
     struct font *f = &r->fonts[font];
 
-    char* c = (char*)text;
+    int font_pixel_size = 48; /* TODO: fix for differeent altas sizes */
+    float scale = pixel_height / (float)font_pixel_size;
+
     int pos_x = pos.x;
-    while (*c) {
+    int baseline_y = pos.y;
+
+    for (const char* c = text; *c; c++) {
         int char_index = (int)(*c - (char)f->char_range.x);
+        if (char_index < 0 || char_index >= f->char_range.y - f->char_range.x + 1)
+            continue;
+
+        struct character *ch = &f->chars[char_index];
+
         struct vec2 glyph_size = {
-            .x = f->chars[char_index].size.x * scale,
-            .y = f->chars[char_index].size.y * scale,
+            .x = ch->size.x * scale,
+            .y = ch->size.y * scale
         };
 
-        renderer_push_char(r, (struct vec2){pos_x, pos.y + (f->chars[char_index].size.y - f->chars[char_index].bearing.y)}, glyph_size, text_color, f, char_index);
-    
-        pos_x += f->chars[char_index].advance * scale; // TODO: needs right conversion
-        c++;
+        struct vec2 glyph_pos = {
+            .x = pos_x,
+            .y = baseline_y + ch->bearing.y * scale
+        };
+
+        renderer_push_char(r, glyph_pos, glyph_size, text_color, f, char_index);
+
+        pos_x += ch->advance * scale;
     }
 }
 
@@ -428,7 +442,7 @@ static uint8_t* font_get_atlas(const char* path, int *width, int *height, struct
         for (uint32_t y = 0; y < face->glyph->bitmap.rows; y++) {
             for (uint32_t x = 0; x < face->glyph->bitmap.width; x++) { // probaly some move to right needed
                 int dst_x = cell_x + x;
-                int dst_y = cell_y + (char_len - face->glyph->bitmap_top) + y;
+                int dst_y = cell_y + y;
 
                 int dst_index = dst_y * (chars_per_line * char_len) + dst_x;
                 uint32_t flipped_y = face->glyph->bitmap.rows - 1 - y;
@@ -445,8 +459,8 @@ static uint8_t* font_get_atlas(const char* path, int *width, int *height, struct
 
         ch->u0 = (float)cell_x / *width;
         ch->v0 = (float)cell_y / *height;
-        ch->u1 = (float)(cell_x + char_len) / *width;
-        ch->v1 = (float)(cell_y + char_len) / *height;
+        ch->u1 = (float)(cell_x + ch->size.x + 0.5f) / *width;
+        ch->v1 = (float)(cell_y + ch->size.y + 0.5f) / *height;
 
         index++;
     }
