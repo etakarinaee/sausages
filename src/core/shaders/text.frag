@@ -8,10 +8,12 @@ out vec4 fragment_color;
 uniform sampler2D u_texture;
 uniform vec3 u_text_color;
 
+uniform vec2 u_glyph_min;   // (u0, v0)
+uniform vec2 u_glyph_size;  // (u1-u0, v1-v0)
+
 void main() {
-    vec4 tex_color = texture(u_texture, texcoord);
-    fragment_color = vec4(tex_color.rgb * tex_color.a, tex_color.a) * vec4(u_text_color, 1.0);
-    
-    if (fragment_color.a <= 0.0) discard;
+    vec2 atlasUV = u_glyph_min + texcoord * u_glyph_size;
+    float alpha = texture(u_texture, atlasUV).r;
+    fragment_color = vec4(u_text_color, alpha);    
 }
 

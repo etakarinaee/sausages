@@ -72,24 +72,12 @@ static int l_get_screen_dimensions(lua_State *L) {
     return 1;
 }
 
-static int l_push_quad(lua_State *L) {
+static int l_push_texture(lua_State *L) {
     const struct vec2 pos = check_vec2(L, 1);
-    const struct color3 color = check_color3(L, 2);
+    const struct vec2 scale = check_vec2(L, 2);
     const texture_id tex = luaL_checkint(L, 3);
 
-    renderer_push_quad(&ctx, pos, 300.0f, 0.0f, color, tex);
-
-    return 0;
-}
-
-static int l_push_quad_ex(lua_State *L) {
-    const struct vec2 pos = check_vec2(L, 1);
-    const struct color3 color = check_color3(L, 2);
-    const texture_id tex = luaL_checkint(L, 3);
-    const double scale = luaL_checknumber(L, 4);
-    const double angle = luaL_checknumber(L, 5);
-
-    renderer_push_quad(&ctx, pos, scale, angle, color, tex);
+    renderer_push_texture(&ctx, pos, scale, 0.0f, tex);
 
     return 0;
 }
@@ -340,8 +328,7 @@ static const luaL_Reg api[] = {
     {"print", l_print},
 
     /* Render */
-    {"push_quad", l_push_quad},
-    {"push_quad_ex", l_push_quad_ex},
+    {"push_texture", l_push_texture},
     {"load_texture", l_load_texture},
     {"get_screen_dimensions", l_get_screen_dimensions},
 
