@@ -4,13 +4,13 @@ local physics = require('physics')
 local local_id = nil
 local players = {}
 
-local platform = { x = 0.0, y = -0.5, w = 1.5, h = 0.1 }
+local platform = { x = 0.0, y = -0.5, w = 800, h = 100 }
 
 local gravity = -2.0
 local speed = 1.0
 local friction = 0.88
-local player_w = 0.08
-local player_h = 0.08
+local player_w = 30
+local player_h = 30
 
 local function new_player()
     return {
@@ -37,6 +37,7 @@ local function deserialize_position(data)
 end
 
 local image = core.load_texture("../test.png")
+local font = core.load_font("../AdwaitaSans-Regular.ttf")
 local angle = 0.0
 
 local pos_x = 0.0
@@ -114,9 +115,10 @@ function game_update(delta_time)
 
     client:send(serialize_position(local_player))
 
-    core.push_quad({platform.x, platform.y}, platform.w, platform.h, {0.3, 0.7, 0.3}, -1)
+    core.push_rect({platform.x, platform.y}, {platform.w, platform.h}, {0.3, 0.7, 0.3})
     for id, player in pairs(players) do
-        core.push_quad({player.x, player.y}, player_w, player_h, {0.9, 0.2, 0.2}, -1)
+        core.push_texture({player.x, player.y}, {player_w, player_h}, image)
+        core.push_text(font, "ID: " .. id, {player.x - 20, player.y + 10}, 25, {1.0, 1.0, 1.0})
     end
 end
 

@@ -61,6 +61,8 @@ int main(void) {
     glfwSetFramebufferSizeCallback(window, resize_callback);
     glfwSetWindowUserPointer(window, &ctx);
 
+    renderer_init(&ctx);
+
     L = lua_init(SAUSAGES_DATA, ENTRY);
     if (!L) {
         fprintf(stderr, "lua_init() failed\n");
@@ -68,10 +70,6 @@ int main(void) {
         return EXIT_FAILURE;
     }
     lua_call_init(L);
-
-    renderer_init(&ctx);
-
-    font_id id = renderer_load_font(&ctx, "../AdwaitaSans-Regular.ttf");
 
 #ifdef SERVER
     double last_time = glfwGetTime();
@@ -100,8 +98,6 @@ int main(void) {
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        renderer_push_rect(&ctx, (struct vec2){-ctx.width * 0.5f + 60, -ctx.height * 0.5f + 60}, (struct vec2){100, 100}, 0.0f, (struct color3){0.0f, 1.0f, 0.0f});
-        renderer_push_text(&ctx, (struct vec2){0, 0}, 48.0f, (struct color3){1.0f, 0.0f, 1.0f}, id, "gijdky");
         renderer_draw(&ctx);
 
         glfwSwapBuffers(window);
@@ -119,6 +115,7 @@ int main(void) {
 
     renderer_deinit(&ctx);
     lua_quit(L);
+    glfwDestroyWindow(ctx.window);
     glfwTerminate();
 
     return EXIT_SUCCESS;

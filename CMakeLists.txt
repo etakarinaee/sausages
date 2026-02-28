@@ -54,7 +54,7 @@ set(CORE_SOURCES
 find_package(Freetype REQUIRED)
 
 
-set(CORE_FLAGS -pedantic-errors -Wall -Wextra -fsanitize=address)
+set(CORE_FLAGS -g -pedantic-errors -Wall -Wextra -fsanitize=address)
 set(CORE_LIBS glad stbi GL glfw freetype luajit-5.1 m dl)
 
 # client

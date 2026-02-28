@@ -167,6 +167,9 @@ int renderer_init(struct render_context *r) {
 
 static void font_deinit(const struct render_context *r) {
     FT_Done_FreeType(r->ft_lib);
+    for (int i = 0; i < r->fonts_count; i++) {
+        if (r->fonts[i].chars) free(r->fonts[i].chars);
+    }
     if (r->fonts) free(r->fonts);
 }
 
