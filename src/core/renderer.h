@@ -59,12 +59,19 @@ struct character {
     float u0, v0, u1, v1;
 };
 
+enum {
+    FONT_ANCHOR_TOP_LEFT,
+    FONT_ANCHOR_BOTTOM_LEFT,
+    FONT_ANCHOR_CENTER,
+};
+
 struct font {
     struct vec2i char_range; /* from this asci code to another all chars its tmp for more advanced loading */ 
     struct character* chars; /* character data array as big as char_range.y - char_range.x */
     texture_id tex;
     int atlas_width;
     int atlas_height;
+    int font_size;
 };
 
 struct camera {
@@ -105,11 +112,11 @@ void renderer_deinit(const struct render_context *r);
 void renderer_push_quad(struct render_context *r, struct quad_data data);
 void renderer_push_rect(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, struct color3 c);
 void renderer_push_texture(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, texture_id texture);
-void renderer_push_text(struct render_context *r, struct vec2 pos, float scale, struct color3 text_color, font_id font, const char* text);
+void renderer_push_text(struct render_context *r, struct vec2 pos, float scale, struct color3 text_color, font_id font, const char* text, int anchor);
 
 void renderer_draw(struct render_context *r);
 
 texture_id renderer_load_texture(const char *path);
-font_id renderer_load_font(struct render_context *r, const char* path);
+font_id renderer_load_font(struct render_context *r, const char* path, int font_size, struct vec2i char_range);
 
 #endif
