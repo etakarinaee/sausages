@@ -237,7 +237,7 @@ void renderer_push_text(struct render_context *r, struct vec2 pos, float pixel_h
     int font_pixel_size = 48; /* TODO: fix for differeent altas sizes */
     float scale = pixel_height / (float)font_pixel_size;
 
-    int pos_x = pos.x;
+    float pos_x = pos.x;
     int baseline_y = pos.y;
 
     for (const char* c = text; *c; c++) {
@@ -253,8 +253,8 @@ void renderer_push_text(struct render_context *r, struct vec2 pos, float pixel_h
         };
 
         struct vec2 glyph_pos = {
-            .x = pos_x + ch->bearing.x * scale,
-            .y = baseline_y - ((font_pixel_size - ch->size.y) * scale * 0.5f) - (ch->size.y - ch->bearing.y) * scale,
+            .x = pos_x + ch->bearing.x * scale + glyph_size.x * 0.5f,
+            .y = baseline_y - (ch->size.y - ch->bearing.y) * scale + glyph_size.y * 0.5f,
         };
 
         renderer_push_char(r, glyph_pos, glyph_size, text_color, f, char_index);

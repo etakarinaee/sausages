@@ -27,6 +27,7 @@ set(ARC_INPUTS
         ${CMAKE_SOURCE_DIR}/src/core/shaders/text.frag
         ${CMAKE_SOURCE_DIR}/src/game/client.lua
         ${CMAKE_SOURCE_DIR}/src/game/server.lua
+        ${CMAKE_SOURCE_DIR}/src/game/physics.lua
 )
 
 add_custom_command(

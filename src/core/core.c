@@ -86,6 +86,8 @@ int main(void) {
         usleep(1000);
     }
 #else
+    glfwSwapInterval(0);
+
     double last_time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
         const double current_time = glfwGetTime();
@@ -104,6 +106,14 @@ int main(void) {
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+
+        // vsync is disabled because it causes some weird behavior when the window is minimized, so cap the fps
+        // to 240 to avoid burning the cpu
+        const double frame_end = glfwGetTime();
+        const double elapsed = frame_end - current_time;
+        if (elapsed < 1.0 / 240.0) {
+            usleep((unsigned int)((1.0 / 240.0 - elapsed) * 1e6));
+        }
     }
 #endif
 

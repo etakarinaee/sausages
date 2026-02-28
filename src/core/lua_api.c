@@ -7,6 +7,7 @@
 #include "renderer.h"
 #include <GLFW/glfw3.h> /* after renderer because renderer includes glad which muss be included after glfw */
 
+#include "archive.h"
 #include "net.h"
 
 // metatables
@@ -61,7 +62,7 @@ static int l_print(lua_State *L) {
 static int l_get_screen_dimensions(lua_State *L) {
     int width, height;
     glfwGetWindowSize(ctx.window, &width, &height);
-    
+
     lua_newtable(L);
     lua_pushinteger(L, width);
     lua_setfield(L, -2, "width");
@@ -409,6 +410,47 @@ static void mouse_init(lua_State *L) {
     lua_setglobal(L, "mouse");
 }
 
+// this archive loader is needed so lua modules can be properly found
+
+static int archive_loader(lua_State *L) {
+    const char *name = luaL_checkstring(L, 1);
+
+    char filename[64];
+    snprintf(filename, sizeof(filename), "%s.lua", name);
+
+    uint32_t len;
+    char *buf = archive_read_alloc(SAUSAGES_DATA, filename, &len);
+    if (!buf) {
+        lua_pushfstring(L, "\n\tno file '%s' in archive", filename);
+        return 1;
+    }
+
+    if (luaL_loadbuffer(L, buf, len, filename) != 0) {
+        free(buf);
+        return lua_error(L);
+    }
+
+    free(buf);
+    return 1;
+}
+
+static void loader_init(lua_State *L) {
+    lua_getglobal(L, "package");
+    lua_getfield(L, -1, "loaders");
+
+    // insert it at index 2 which is after preload
+    int n = (int) lua_objlen(L, -1);
+    for (int i = n; i >= 2; i--) {
+        lua_rawgeti(L, -1, i);
+        lua_rawseti(L, -2, i + 1);
+    }
+
+    lua_pushcfunction(L, archive_loader);
+    lua_rawseti(L, -2, 2);
+
+    lua_pop(L, 2);
+}
+
 void lua_api_init(lua_State *L) {
     meta(L, SERVER_MT, server_methods);
     meta(L, CLIENT_MT, client_methods);
@@ -445,4 +487,5 @@ void lua_api_init(lua_State *L) {
 
     keys_init(L);
     mouse_init(L);
+    loader_init(L);
 }
