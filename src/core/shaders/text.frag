@@ -11,6 +11,11 @@ uniform vec2 u_glyph_size;  // (u1-u0, v1-v0)
 
 void main() {
     vec2 atlasUV = u_glyph_min + vec2(texcoord.x, 1.0 - texcoord.y) * u_glyph_size;
-    float alpha = texture(u_texture, atlasUV).r;
-    fragment_color = vec4(u_text_color, alpha);    
+    float d = texture(u_texture, atlasUV).r;
+
+    float aaf = fwidth(d);
+    float alpha = smoothstep(0.5 - aaf, 0.5 + aaf, d);
+
+    fragment_color = vec4(u_text_color, alpha);
 }
+

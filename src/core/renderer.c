@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <stbi/stb_image.h>
 
@@ -347,6 +348,7 @@ void renderer_draw(struct render_context *r) {
         }
 
         GLint sampler_loc;
+        bool text = false; /* not very good at the moment its so we can only disable depth mask when rendering text */
 
         /* RECT */
         render_rect:
@@ -387,6 +389,9 @@ void renderer_draw(struct render_context *r) {
         glUniform2f(uniform_glyph_min_loc, data->data.text.min.x, data->data.text.min.y);
         glUniform2f(uniform_glyph_size_loc, data->data.text.size.x, data->data.text.size.y);
         glUniform3f(uniform_text_color_loc, data->data.text.color.r, data->data.text.color.g, data->data.text.color.b);
+
+        text = true;
+        glDepthMask(GL_FALSE);
         goto render; /* In case for more labels */
 
         render:
@@ -394,6 +399,7 @@ void renderer_draw(struct render_context *r) {
         glUniformMatrix4fv(uniform_matrix_model_loc, 1, GL_FALSE, m.m);
         glUniformMatrix4fv(uniform_matrix_cam_loc, 1, GL_FALSE, cam_m.m);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDepthMask(GL_TRUE);
     }
 
     r->quads_count = 0;
@@ -468,14 +474,17 @@ static uint8_t* font_get_atlas(const char* path, int font_size, struct vec2i cha
         return NULL;
     }
 
-    error = FT_Set_Pixel_Sizes(face, 0, char_len);
+    FT_GlyphSlot slot = face->glyph;
 
+    error = FT_Set_Pixel_Sizes(face, 0, char_len);
     int index = 0;
     for (uint8_t c = font->char_range.x; c <= font->char_range.y; c++) {
         if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
             fprintf(stderr, "failed loading char: %c in: %s\n", c, path);
             continue;
         }
+
+        FT_Render_Glyph(slot, FT_RENDER_MODE_SDF);
 
         int cell_x = (index % chars_per_line) * char_len;
         int cell_y = (index / chars_per_line) * char_len;
@@ -497,7 +506,7 @@ static uint8_t* font_get_atlas(const char* path, int font_size, struct vec2i cha
                 }
 
                 int dst_index = dst_y * (*width) + dst_x;
-                data[dst_index] = face->glyph->bitmap.buffer[y * face->glyph->bitmap.width + x];
+                data[dst_index] = face->glyph->bitmap.buffer[y * face->glyph->bitmap.pitch + x];
             }
         }
 
