@@ -138,7 +138,20 @@ static int l_push_text(lua_State *L) {
     float scale = luaL_checknumber(L, 4);
     const struct color3 color = check_color3(L, 5);
     
-    renderer_push_text(&ctx, pos, scale, color, font, text);
+    renderer_push_text(&ctx, pos, scale, color, font, text, FONT_ANCHOR_BOTTOM_LEFT);
+
+    return 0;
+}
+
+static int l_push_text_ex(lua_State *L) {
+    const int font = luaL_checkint(L, 1);
+    const char* text = luaL_checkstring(L, 2);
+    const struct vec2 pos = check_vec2(L, 3);
+    float scale = luaL_checknumber(L, 4);
+    const struct color3 color = check_color3(L, 5);
+    const int anchor = luaL_checkint(L, 6);
+    
+    renderer_push_text(&ctx, pos, scale, color, font, text, anchor);
 
     return 0;
 }
@@ -404,6 +417,7 @@ static const luaL_Reg api[] = {
     {"push_texture", l_push_texture},
     {"push_texture_ex", l_push_texture_ex},
     {"push_text", l_push_text},
+    {"push_text_ex", l_push_text_ex},
 
     {"load_texture", l_load_texture},
     {"load_font", l_load_font},
@@ -558,6 +572,16 @@ void lua_api_init(lua_State *L) {
     lua_pushinteger(L, NET_EVENT_DATA);
     lua_setfield(L, -2, "data");
     lua_setfield(L, -2, "net_event");
+
+    /* core.text_anchor */
+    lua_newtable(L);
+    lua_pushinteger(L, FONT_ANCHOR_TOP_LEFT);
+    lua_setfield(L, -2, "top_left");
+    lua_pushinteger(L, FONT_ANCHOR_BOTTOM_LEFT);
+    lua_setfield(L, -2, "bottom_left");
+    lua_pushinteger(L, FONT_ANCHOR_CENTER);
+    lua_setfield(L, -2, "center");
+    lua_setfield(L, -2, "text_anchor");
 
     lua_setglobal(L, "core");
 

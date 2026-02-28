@@ -118,7 +118,7 @@ function game_update(delta_time)
     core.push_rect({platform.x, platform.y}, {platform.w, platform.h}, {0.3, 0.7, 0.3})
     for id, player in pairs(players) do
         core.push_texture({player.x, player.y}, {player_w, player_h}, image)
-        core.push_text(font, "ID: " .. id, {player.x - 20, player.y + 10}, 25, {1.0, 1.0, 1.0})
+        core.push_text_ex(font, "ID: " .. id, {player.x, player.y + 10}, 25, {1.0, 1.0, 1.0}, core.text_anchor.center)
     end
 end
 

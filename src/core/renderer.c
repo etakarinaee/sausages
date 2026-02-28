@@ -167,7 +167,7 @@ int renderer_init(struct render_context *r) {
 
 static void font_deinit(const struct render_context *r) {
     FT_Done_FreeType(r->ft_lib);
-    for (int i = 0; i < r->fonts_count; i++) {
+    for (size_t i = 0; i < r->fonts_count; i++) {
         if (r->fonts[i].chars) free(r->fonts[i].chars);
     }
     if (r->fonts) free(r->fonts);
@@ -234,14 +234,57 @@ static void renderer_push_char(struct render_context *r, struct vec2 pos, struct
     renderer_push_quad(r, data);
 }
 
-void renderer_push_text(struct render_context *r, struct vec2 pos, float pixel_height, struct color3 text_color, font_id font, const char *text) {
+static float measure_text(struct render_context *r, float pixel_height, font_id font, const char* text) {
     struct font *f = &r->fonts[font];
 
-    int font_pixel_size = f->font_size; /* TODO: fix for differeent altas sizes */
+    int font_pixel_size = f->font_size; 
+    float scale = pixel_height / (float)font_pixel_size;
+
+    float width = 0.0f;
+    for (const char* c = text; *c; c++) {
+        int char_index = (int)(*c - (char)f->char_range.x);
+        if (char_index < 0 || char_index >= f->char_range.y - f->char_range.x + 1)
+            continue;
+
+        struct character *ch = &f->chars[char_index];
+
+        struct vec2 glyph_size = {
+            .x = ch->size.x * scale,
+        };
+
+        width += ch->advance * scale;
+    }
+
+    return width;
+}
+
+void renderer_push_text(struct render_context *r, struct vec2 pos, float pixel_height, struct color3 text_color,
+                        font_id font, const char *text, int anchor) {
+    struct font *f = &r->fonts[font];
+
+    int font_pixel_size = f->font_size;
     float scale = pixel_height / (float)font_pixel_size;
 
     float pos_x = pos.x;
     int baseline_y = pos.y;
+    
+    switch (anchor) {
+        case FONT_ANCHOR_TOP_LEFT:
+            baseline_y -= pixel_height;
+            break;
+
+        case FONT_ANCHOR_CENTER: {
+            /* TODO: maybe some chaching */
+            float width = measure_text(r, pixel_height, font, text);
+            pos_x -= width * 0.5f;
+            break;
+        }
+
+        /* default dont need to change anything */
+        case FONT_ANCHOR_BOTTOM_LEFT:
+        default:
+            break;
+    }
 
     for (const char* c = text; *c; c++) {
         int char_index = (int)(*c - (char)f->char_range.x);
