@@ -12,7 +12,8 @@ struct audio_data {
     atomic_int vol_l;
     atomic_int vol_r;
 
-    atomic_int channels;
+    atomic_int channels_in;
+    atomic_int channels_out;
     atomic_int sample_rate;
 };
 
@@ -26,5 +27,6 @@ struct audio_context {
 extern struct audio_context audio_context;
 
 int audio_init();
+void audio_deinit();
 
 #endif // AUDIO_H

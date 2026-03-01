@@ -8,6 +8,7 @@
 #include <luajit-2.1/lua.h>
 
 #include "archive.h"
+#include "audio.h"
 #include "local.h"
 #include "lua.h"
 #include "renderer.h"
@@ -64,6 +65,7 @@ int main(void) {
 
     // TODO: any calls to renderer in server would segfault
     renderer_init(&render_context);
+    audio_init();
 #endif
 
     L = lua_init(SAUSAGES_DATA, ENTRY);
