@@ -12,6 +12,13 @@ function game_update(dt)
         if ev.type == core.net_event.connect then
             clients[ev.id] = { nickname = "Player" .. ev.id }
             core.print(ev.id .. " joined the game")
+
+            for id, client in pairs(clients) do
+                if id ~= ev.id then
+                    server:send(ev.id, id .. ":nickname:" .. client.nickname)
+                end
+            end
+
         elseif ev.type == core.net_event.disconnect then
             core.print(clients[ev.id].nickname .. " left the game")
             server:broadcast(ev.id .. ":left:")
