@@ -20,6 +20,11 @@ float math_vec2_length(struct vec2 v) {
     return sqrtf(v.x * v.x + v.y * v.y);
 }
 
+float math_vec2_distance(struct vec2 a, struct vec2 b) {
+    struct vec2 delta = math_vec2_subtract(a, b);
+    return math_vec2_length(delta);
+}
+
 float math_vec2_dot(struct vec2 a, struct vec2 b) {
     return a.x * b.x + a.y * b.y;
 }
@@ -30,6 +35,20 @@ float math_vec2_angle_cos(struct vec2 a, struct vec2 b) {
 
 float math_vec2_angle(struct vec2 a, struct vec2 b) {
     return acosf(math_vec2_angle_cos(a, b));
+}
+
+struct vec2i math_vec2_to_vec2i(struct vec2 v) {
+    return (struct vec2i){
+        (int)v.x,
+        (int)v.y
+    };
+}
+
+struct vec2 math_vec2i_to_vec2(struct vec2i v) {
+    return (struct vec2){
+        (float)v.x,
+        (float)v.y,
+    };
 }
 
 void math_matrix_identity(struct matrix *m) {

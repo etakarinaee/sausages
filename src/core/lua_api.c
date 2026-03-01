@@ -11,6 +11,8 @@
 #include "local.h"
 #include "net.h"
 #include "cmath.h"
+#include "ui.h"
+#include "collision.h"
 
 // metatables
 #define SERVER_MT "net_server"
@@ -76,6 +78,10 @@ static int l_print(lua_State *L) {
     return 0;
 }
 
+////////////////
+/* rendering */ 
+////////////////
+
 static int l_get_screen_dimensions(lua_State *L) {
     int width, height;
     glfwGetWindowSize(render_context.window, &width, &height);
@@ -95,7 +101,7 @@ static int l_push_rect(lua_State *L) {
     const struct vec2 scale = check_vec2(L, 2);
     const struct color3 color = check_color3(L, 3);
 
-    renderer_push_rect(&render_context, pos, scale, 0.0f, color);
+    renderer_push_rect(&render_context, pos, scale, 0.0f, color, ANCHOR_CENTER);
 
     return 0;
 }
@@ -105,8 +111,9 @@ static int l_push_rect_ex(lua_State *L) {
     const struct vec2 scale = check_vec2(L, 2);
     const float rotation = luaL_checknumber(L, 3);
     const struct color3 color = check_color3(L, 4);
+    const int anchor = luaL_checkint(L, 5);
 
-    renderer_push_rect(&render_context, pos, scale, rotation, color);
+    renderer_push_rect(&render_context, pos, scale, rotation, color, anchor);
 
     return 0;
 }
@@ -116,7 +123,7 @@ static int l_push_texture(lua_State *L) {
     const struct vec2 scale = check_vec2(L, 2);
     const texture_id tex = luaL_checkint(L, 3);
 
-    renderer_push_texture(&render_context, pos, scale, 0.0f, tex);
+    renderer_push_texture(&render_context, pos, scale, 0.0f, tex, ANCHOR_CENTER);
 
     return 0;
 }
@@ -126,8 +133,9 @@ static int l_push_texture_ex(lua_State *L) {
     const struct vec2 scale = check_vec2(L, 2);
     const float rotation = luaL_checknumber(L, 3);
     const texture_id tex = luaL_checkint(L, 4);
+    const int anchor = luaL_checkint(L, 5);
 
-    renderer_push_texture(&render_context, pos, scale, rotation, tex);
+    renderer_push_texture(&render_context, pos, scale, rotation, tex, anchor);
 
     return 0;
 }
@@ -139,7 +147,7 @@ static int l_push_text(lua_State *L) {
     float scale = luaL_checknumber(L, 4);
     const struct color3 color = check_color3(L, 5);
     
-    renderer_push_text(&render_context, pos, scale, color, font, text, FONT_ANCHOR_BOTTOM_LEFT);
+    renderer_push_text(&render_context, pos, scale, color, font, text, ANCHOR_BOTTOM_LEFT);
 
     return 0;
 }
@@ -168,10 +176,65 @@ static int l_load_font(lua_State *L) {
     const int font_size = luaL_checkint(L, 2);
     const struct vec2i range = check_vec2i(L, 3);
 
-    const font_id font = renderer_load_font(&render_context,text, font_size, range);
+    const font_id font = renderer_load_font(&render_context, text, font_size, range);
     lua_pushinteger(L, font);
     return 1;
 }
+
+////////////////
+/* ui */ 
+////////////////
+
+static int l_button(lua_State *L) {
+    const int font = luaL_checkint(L, 1);
+    const char* text = luaL_checkstring(L, 2);   
+    const struct vec2 pos = check_vec2(L, 3);
+    const struct vec2i size = check_vec2i(L, 4);
+
+    bool clicked = ui_button(&render_context, font, text, pos, size);
+    if (clicked) {
+        lua_pushinteger(L, clicked);
+        return 1;
+    }
+
+    return 0;
+}
+
+////////////////
+/* collision */
+////////////////
+
+static int l_check_point_circle(lua_State *L) {
+    const struct vec2 p = check_vec2(L, 1);
+    const struct vec2 center = check_vec2(L, 2);
+    const float radius = (float)luaL_checknumber(L, 3);
+
+    bool in = coll_check_point_circle(p, center, radius);
+    if (in) { 
+        lua_pushinteger(L, in);
+        return 1;
+    }
+
+    return 0;
+}
+
+static int l_check_point_rect(lua_State *L) {
+    const struct vec2 p = check_vec2(L, 1);
+    const struct vec2 pos = check_vec2(L, 2);
+    const struct vec2 size = check_vec2(L, 3);
+
+    bool in = coll_check_point_rect(p, pos, size);
+    if (in) { 
+        lua_pushinteger(L, in);
+        return 1;
+    }
+
+    return 0;
+}
+
+////////////////
+/* input */
+////////////////
 
 static int l_key_pressed(lua_State *L) {
     if (glfwGetKey(render_context.window, luaL_checkint(L, 1)) == GLFW_PRESS) {
@@ -220,7 +283,9 @@ static int l_mouse_pos(lua_State *L) {
     return 1;
 }
 
-// networking
+////////////////
+/* networking */
+////////////////
 
 static int push_event(lua_State *L, const struct net_event *event) {
     if (event->type == NET_EVENT_NONE) {
@@ -449,6 +514,13 @@ static const luaL_Reg api[] = {
     {"load_font", l_load_font},
     {"get_screen_dimensions", l_get_screen_dimensions},
 
+    /* ui */
+    {"button", l_button},
+
+    /* collison */
+    {"check_point_circle", l_check_point_circle},
+    {"check_point_rect", l_check_point_rect},
+
     /* localization */
     {"local_load", l_local_load},
     {"local_get", l_local_get},
@@ -604,15 +676,15 @@ void lua_api_init(lua_State *L) {
     lua_setfield(L, -2, "data");
     lua_setfield(L, -2, "net_event");
 
-    /* core.text_anchor */
+    /* core.anchor */
     lua_newtable(L);
-    lua_pushinteger(L, FONT_ANCHOR_TOP_LEFT);
+    lua_pushinteger(L, ANCHOR_TOP_LEFT);
     lua_setfield(L, -2, "top_left");
-    lua_pushinteger(L, FONT_ANCHOR_BOTTOM_LEFT);
+    lua_pushinteger(L, ANCHOR_BOTTOM_LEFT);
     lua_setfield(L, -2, "bottom_left");
-    lua_pushinteger(L, FONT_ANCHOR_CENTER);
+    lua_pushinteger(L, ANCHOR_CENTER);
     lua_setfield(L, -2, "center");
-    lua_setfield(L, -2, "text_anchor");
+    lua_setfield(L, -2, "anchor");
 
     lua_setglobal(L, "core");
 

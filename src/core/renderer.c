@@ -194,10 +194,35 @@ void renderer_push_quad(struct render_context *r, struct quad_data data) {
     r->quads[r->quads_count++] = data;
 }
 
-void renderer_push_rect(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, struct color3 c) {
+static struct vec2 anchoring_pos(struct vec2 pos, struct vec2 scale, int anchor) {
+    struct vec2 anchor_pos = pos;
+
+    switch (anchor) {
+        case ANCHOR_BOTTOM_LEFT:
+            anchor_pos.x += scale.x * 0.5f;
+            anchor_pos.y += scale.y * 0.5f;
+            break;
+
+        case ANCHOR_TOP_LEFT:
+            anchor_pos.x += scale.x * 0.5f;
+            anchor_pos.y -= scale.y * 0.5f;
+            break;
+
+        /* default without calculation here */
+        case ANCHOR_CENTER:
+        default:
+            break;
+    }
+
+    return anchor_pos;
+}
+
+void renderer_push_rect(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, struct color3 c, int anchor) {
+    struct vec2 anchor_pos = anchoring_pos(pos, scale, anchor);
+
     struct quad_data data = (struct quad_data){
         .type = QUAD_TYPE_RECT,
-        .pos = pos,
+        .pos = anchor_pos,
         .scale = scale,
         .rotation = rotation,
         .data.color = c,
@@ -206,10 +231,12 @@ void renderer_push_rect(struct render_context *r, struct vec2 pos, struct vec2 s
     renderer_push_quad(r, data);
 }
 
-void renderer_push_texture(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, texture_id texture) {
+void renderer_push_texture(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, texture_id texture, int anchor) {
+    struct vec2 anchor_pos = anchoring_pos(pos, scale, anchor);
+
     struct quad_data data = (struct quad_data){
         .type = QUAD_TYPE_TEXTURE,
-        .pos = pos,
+        .pos = anchor_pos,
         .scale = scale,
         .rotation = rotation,
         .data.texture.tex_id = texture,
@@ -264,12 +291,13 @@ void renderer_push_text(struct render_context *r, struct vec2 pos, float pixel_h
     float pos_x = pos.x;
     int baseline_y = pos.y;
     
+    /* custom anchorin needed for font */
     switch (anchor) {
-        case FONT_ANCHOR_TOP_LEFT:
+        case ANCHOR_TOP_LEFT:
             baseline_y -= pixel_height;
             break;
 
-        case FONT_ANCHOR_CENTER: {
+        case ANCHOR_CENTER: {
             /* TODO: maybe some chaching */
             float width = measure_text(r, pixel_height, font, text);
             pos_x -= width * 0.5f;
@@ -277,7 +305,7 @@ void renderer_push_text(struct render_context *r, struct vec2 pos, float pixel_h
         }
 
         /* default dont need to change anything */
-        case FONT_ANCHOR_BOTTOM_LEFT:
+        case ANCHOR_BOTTOM_LEFT:
         default:
             break;
     }
@@ -348,7 +376,6 @@ void renderer_draw(struct render_context *r) {
         }
 
         GLint sampler_loc;
-        bool text = false; /* not very good at the moment its so we can only disable depth mask when rendering text */
 
         /* RECT */
         render_rect:
@@ -390,7 +417,6 @@ void renderer_draw(struct render_context *r) {
         glUniform2f(uniform_glyph_size_loc, data->data.text.size.x, data->data.text.size.y);
         glUniform3f(uniform_text_color_loc, data->data.text.color.r, data->data.text.color.g, data->data.text.color.b);
 
-        text = true;
         glDepthMask(GL_FALSE);
         goto render; /* In case for more labels */
 

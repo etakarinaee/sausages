@@ -26,11 +26,15 @@ struct vec2 math_vec2_subtract(struct vec2 a, struct vec2 b);
 struct vec2 math_vec2_scale(struct vec2 v, float scalar);
 
 float math_vec2_length(struct vec2 v);
+float math_vec2_distance(struct vec2 a, struct vec2 b);
 float math_vec2_dot(struct vec2 a, struct vec2 b);
 float math_vec2_angle_cos(struct vec2 a, struct vec2 b);
 
 /* Angle in degrees */
 float math_vec2_angle(struct vec2 a, struct vec2 b);
+
+struct vec2i math_vec2_to_vec2i(struct vec2 v);
+struct vec2 math_vec2i_to_vec2(struct vec2i v); 
 
 void math_matrix_identity(struct matrix *m);
 void math_matrix_translate(struct matrix *m, float x, float y, float z);
