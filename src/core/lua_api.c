@@ -12,6 +12,7 @@
 #include "net.h"
 #include "cmath.h"
 #include "ui.h"
+#include "collision.h"
 
 // metatables
 #define SERVER_MT "net_server"
@@ -190,7 +191,45 @@ static int l_button(lua_State *L) {
     const struct vec2 pos = check_vec2(L, 3);
     const struct vec2i size = check_vec2i(L, 4);
 
-    ui_button(&render_context, font, text, pos, size);
+    bool clicked = ui_button(&render_context, font, text, pos, size);
+    if (clicked) {
+        lua_pushinteger(L, clicked);
+        return 1;
+    }
+
+    return 0;
+}
+
+////////////////
+/* collision */
+////////////////
+
+static int l_check_point_circle(lua_State *L) {
+    const struct vec2 p = check_vec2(L, 1);
+    const struct vec2 center = check_vec2(L, 2);
+    const float radius = (float)luaL_checknumber(L, 3);
+
+    bool in = coll_check_point_circle(p, center, radius);
+    if (in) { 
+        lua_pushinteger(L, in);
+        return 1;
+    }
+
+    return 0;
+}
+
+static int l_check_point_rect(lua_State *L) {
+    const struct vec2 p = check_vec2(L, 1);
+    const struct vec2 pos = check_vec2(L, 2);
+    const struct vec2 size = check_vec2(L, 3);
+
+    bool in = coll_check_point_rect(p, pos, size);
+    if (in) { 
+        lua_pushinteger(L, in);
+        return 1;
+    }
+
+    return 0;
 }
 
 ////////////////
@@ -477,6 +516,10 @@ static const luaL_Reg api[] = {
 
     /* ui */
     {"button", l_button},
+
+    /* collison */
+    {"check_point_circle", l_check_point_circle},
+    {"check_point_rect", l_check_point_rect},
 
     /* localization */
     {"local_load", l_local_load},

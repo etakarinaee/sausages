@@ -126,7 +126,9 @@ function game_update(delta_time)
         core.push_text_ex(font, "ID: " .. id, {player.x, player.y + 10}, 25, {1.0, 1.0, 1.0}, core.anchor.center)
     end
 
-    core.button(font, "button", {0, 0}, {300, 100})
+    if core.button(font, "button", {0, 0}, {300, 100}) then
+        core.print("YOO")
+    end
 end
 
 function game_quit()
