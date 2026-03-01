@@ -14,7 +14,8 @@ struct audio_data {
 
     atomic_int channels_in;
     atomic_int channels_out;
-    atomic_int sample_rate;
+    atomic_int sample_rate_in;
+    atomic_int sample_rate_out;
 };
 
 struct audio_context {

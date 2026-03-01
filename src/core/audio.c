@@ -36,7 +36,7 @@ static int audio_callback(const void* input_buf, void* out_buf, unsigned long fr
 
     const float freq = 440.0f;
     const float amp  = 0.2f;
-    const float sr   = 48000.0f;
+    const float sr   = data->sample_rate_out; /* TODO: maybe not hardcode sample rate */
 
     for (uint64_t i = 0; i < frames_per_buf; i++) {
 
@@ -79,13 +79,14 @@ static inline PaStreamParameters get_dev_info(int dev, int *sample_rate, bool in
 
 static int create_stream(int dev_input, int dev_output) {
  
-    PaStreamParameters input_param = get_dev_info(dev_input, &audio_context.data.sample_rate, true);
+    PaStreamParameters input_param = get_dev_info(dev_input, &audio_context.data.sample_rate_in, true);
     audio_context.data.channels_in = input_param.channelCount;
 
     /* TODO: maybe  also save sample rate */
-    PaStreamParameters output_param = get_dev_info(dev_output, NULL, false);
+    PaStreamParameters output_param = get_dev_info(dev_output, &audio_context.data.sample_rate_out, false);
     audio_context.data.channels_out = output_param.channelCount;
 
+    /* TODO: maybe not hardcode sample rate */
     audio_context.err = Pa_OpenStream(&audio_context.stream, &input_param, &output_param, 48000,
                                       FRAMES_PER_BUFFER, paClipOff, audio_callback, &audio_context.data);
     if (check_err(audio_context.err)) {
