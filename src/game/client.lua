@@ -29,7 +29,10 @@ end
 
 local function deserialize_message(data)
     local id, msg_type, payload = data:match("^(%d+):(%w+):(.+)$")
-    if not id then return nil end
+    if not id then
+        id, msg_type = data:match("^(%d+):(%w+):?$")
+        if not id then return nil end
+    end
 
     id = tonumber(id)
 
