@@ -60,9 +60,9 @@ struct character {
 };
 
 enum {
-    FONT_ANCHOR_TOP_LEFT,
-    FONT_ANCHOR_BOTTOM_LEFT,
-    FONT_ANCHOR_CENTER,
+    ANCHOR_TOP_LEFT,
+    ANCHOR_BOTTOM_LEFT,
+    ANCHOR_CENTER,
 };
 
 struct font {
@@ -110,8 +110,8 @@ int renderer_init(struct render_context *r);
 void renderer_deinit(const struct render_context *r);
 
 void renderer_push_quad(struct render_context *r, struct quad_data data);
-void renderer_push_rect(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, struct color3 c);
-void renderer_push_texture(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, texture_id texture);
+void renderer_push_rect(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, struct color3 c, int anchor);
+void renderer_push_texture(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, texture_id texture, int anchor);
 void renderer_push_text(struct render_context *r, struct vec2 pos, float scale, struct color3 text_color, font_id font, const char* text, int anchor);
 
 void renderer_draw(struct render_context *r);

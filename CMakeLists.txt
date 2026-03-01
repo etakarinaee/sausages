@@ -53,6 +53,7 @@ set(CORE_SOURCES
         src/core/net.c
         src/core/cmath.c
         src/core/local.c
+        src/core/ui.c
 )
 
 # Freetype2

@@ -32,6 +32,20 @@ float math_vec2_angle(struct vec2 a, struct vec2 b) {
     return acosf(math_vec2_angle_cos(a, b));
 }
 
+struct vec2i math_vec2_to_vec2i(struct vec2 v) {
+    return (struct vec2i){
+        (int)v.x,
+        (int)v.y
+    };
+}
+
+struct vec2 math_vec2i_to_vec2(struct vec2i v) {
+    return (struct vec2){
+        (float)v.x,
+        (float)v.y,
+    };
+}
+
 void math_matrix_identity(struct matrix *m) {
     *m = (struct matrix){ .m = {
         [0] = 1.0f, [5] = 1.0f, [10] = 1.0f, [15] = 1.0f
