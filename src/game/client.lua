@@ -49,7 +49,9 @@ local image = core.load_texture("../test.png")
 local font = core.load_font("../AdwaitaSans-Regular.ttf", 48, {32, 128})
 
 function game_init()
-    client = core.client.new(os.getenv("SAUSAGES_IP") or "127.0.0.1", 7777)
+    local ip = os.getenv("SAUSAGES_IP") or "127.0.0.1"
+    client = core.client.new(ip, 7777)
+    core.print("connecting to " .. ip .. ":7777")
 end
 
 local tick_rate = 1.0 / 120.0
@@ -131,7 +133,7 @@ function game_update(delta_time)
     core.push_rect({platform.x, platform.y}, {platform.w, platform.h}, {0.3, 0.7, 0.3})
     for id, player in pairs(players) do
         core.push_texture({player.x, player.y}, {player_w, player_h}, image)
-        core.push_text_ex(font, player.nickname, {player.x, player.y + 10}, 25, {1.0, 1.0, 1.0}, core.text_anchor.center)
+        core.push_text_ex(font, player.nickname, {player.x, player.y + 10}, 25, {1.0, 1.0, 1.0}, core.anchor.center)
     end
 
     if core.button(font, "button", {0, 0}, {300, 100}) then
