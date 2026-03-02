@@ -11,28 +11,34 @@
 #define AUDIO_FRAMES_PER_BUFFER 512
 
 /* for max 2 channels 2x */
-#define AUDIO_BUFFER_COUNT AUDIO_FRAMES_PER_BUFFER * 2
+#define AUDIO_BUFFER_COUNT (AUDIO_FRAMES_PER_BUFFER * 2)
+
+#define AUDIO_BUFFER_RING_COUNT (AUDIO_BUFFER_COUNT * 8)
 
 enum {
     AUDIO_INPUT_AVAILABLE,
     AUDIO_INPUT_NOT_AVAILALBE,
 };
 
-struct audio_data {  
-    atomic_int vol_l;
-    atomic_int vol_r;
+struct ring_buf {
+    float buf[AUDIO_BUFFER_RING_COUNT];
+    int write_pos;
+    int read_pos;
+};
 
+struct audio_data {  
     atomic_int channels_in;
     atomic_int channels_out;
     atomic_int sample_rate_in;
     atomic_int sample_rate_out;
 
-    /*
-        buffer[0] always indicates if we want to play any data 
-        if data then buffer[0] == AUDIO_INPUT_AVAILABLE 
-    */
-    float buffer_out[AUDIO_BUFFER_COUNT]; 
-    float buffer_in[AUDIO_BUFFER_COUNT];
+    /* only gets written in audio callback 
+       and only read in lua api */
+    struct ring_buf in; /* microfon input */
+
+    /* only gets read in audio callback 
+       and only written in lua api */
+    struct ring_buf out; /* output from other clients */
 };
 
 struct audio_context {
@@ -46,5 +52,8 @@ extern struct audio_context audio_context;
 
 int audio_init();
 void audio_deinit();
+
+void ring_buf_write(struct ring_buf *ring, float val);
+float ring_buf_read(struct ring_buf *ring);
 
 #endif // AUDIO_H

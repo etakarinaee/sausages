@@ -11,6 +11,17 @@
 
 struct audio_context audio_context = {0};
 
+void ring_buf_write(struct ring_buf *ring, float val) {
+    ring->buf[ring->write_pos % AUDIO_BUFFER_RING_COUNT] = val;
+    ring->write_pos++;
+}
+
+float ring_buf_read(struct ring_buf *ring) {
+    float val = ring->buf[ring->read_pos % AUDIO_BUFFER_RING_COUNT];
+    ring->read_pos++;
+    return val;
+}
+
 static inline int check_err(PaError err) {
     if (err != paNoError) {
         fprintf(stderr, "portaudio audio_context.error: %s\n", Pa_GetErrorText(audio_context.err));
@@ -22,48 +33,58 @@ static inline int check_err(PaError err) {
 
 static int audio_callback(const void* input_buf, void* out_buf, unsigned long frames_per_buf, 
                           const PaStreamCallbackTimeInfo *time_info, PaStreamCallbackFlags flags, void* user_data) {
-
     (void)time_info;
     (void)flags;
 
     struct audio_data* data = user_data;
 
-    //memset(data->buffer_out, 0, AUDIO_FRAMES_PER_BUFFER * sizeof(float));
+    float* in = (float*)input_buf;
+    float* out = (float*)out_buf;
 
+    /* Input */
+    /* when input from microphone write it to in ring buffer to send it to other clients later */
     if (input_buf) {
-        memcpy(data->buffer_in, input_buf, AUDIO_BUFFER_COUNT * sizeof(float));
+        for (int i = 0; i < frames_per_buf * data->channels_in; i++) {
+            ring_buf_write(&data->in, in[i]);
+        }
+    }
+
+    /* Output */
+    if (data->channels_in == data->channels_out) {
+        for (unsigned long i = 0; i < frames_per_buf * data->channels_out; i++) {
+            if (data->out.read_pos != data->out.write_pos) {
+                out[i] = ring_buf_read(&data->out);
+            }
+            else {
+                /* buffer underflow just output silience*/
+                out[i] = 0.0f;
+            }
+        }
+    } 
+    else if (data->channels_in == 1 && data->channels_out == 2) {
+        for (unsigned long i = 0; i < frames_per_buf; i++) {
+            if (data->out.read_pos != data->out.write_pos) {
+                float sample = ring_buf_read(&data->out);
+                out[i] = sample;
+                out[i * 2 + 1] = sample; 
+            }
+            else {
+                out[i] = 0.0f;
+                out[i * 2 + 1] = 0.0f;
+            }
+        }
     }
 
     /*
-    if (data->buffer_out[0] == AUDIO_INPUT_NOT_AVAILALBE) {
-        float* out = (float*)out_buf;
-        for (unsigned long i = 0; i < frames_per_buf * data->channels_out; i++)
-            out[i] = 0.0f;
-        return paContinue;
-    }
-    */
-
-    float* in = data->buffer_out;
-    float* out = (float*)out_buf;
-
-    if (data->channels_in == data->channels_out) {
-        for (unsigned long i = 0; i < frames_per_buf * data->channels_out; i++)
-            out[i] = in[i];
-    } else if (data->channels_in == 1 && data->channels_out == 2) {
-        for (unsigned long i = 0; i < frames_per_buf; i++) {
-            float sample = in[i];
-            out[i * 2]     = sample; // left
-            out[i * 2 + 1] = sample; // right
-        }
-    } else if (data->channels_in == 2 && data->channels_out == 1) {
+    else if (data->channels_in == 2 && data->channels_out == 1) {
         for (unsigned long i = 0; i < frames_per_buf; i++) {
             float sample = 0.5f * (in[i * 2] + in[i * 2 + 1]);
             out[i] = sample;
         }
     }
+    */
 
     return paContinue;
-
 }
 
 static inline PaStreamParameters get_dev_info(int dev, int *sample_rate, bool input) {
@@ -113,6 +134,8 @@ static int create_stream(int dev_input, int dev_output) {
 }
 
 int audio_init() {
+    memset(&audio_context.data, 0, sizeof(struct audio_data));
+
     audio_context.err = Pa_Initialize();
     if (check_err(audio_context.err)) {
         fprintf(stderr, "audio: failed to init portaudio\n");

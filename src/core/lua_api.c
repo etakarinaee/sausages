@@ -246,7 +246,7 @@ static int l_get_audio_buffer(lua_State *L) {
 
     for (int i = 0; i < AUDIO_BUFFER_COUNT; i++) {
         lua_pushinteger(L, i); // index
-        lua_pushnumber(L, audio_context.data.buffer_in[i]);
+        lua_pushnumber(L, audio_context.data.in.buf[i]);
         lua_settable(L, -3);
     }
 
@@ -254,7 +254,6 @@ static int l_get_audio_buffer(lua_State *L) {
 } 
 
 static int l_write_audio_buffer(lua_State *L) {
-    float buffer[AUDIO_BUFFER_COUNT];
 
     luaL_checktype(L, 1, LUA_TTABLE);
 
@@ -262,16 +261,14 @@ static int l_write_audio_buffer(lua_State *L) {
         lua_rawgeti(L, 1, i + 1);
 
         if (!lua_isnumber(L, -1)) {
-            buffer[i] = 0.0f;  
+            ring_buf_write(&audio_context.data.out, 0.0f);  
         } 
         else {
-            buffer[i] = (float)lua_tonumber(L, -1);
+            ring_buf_write(&audio_context.data.out,(float)lua_tonumber(L, -1));  
         }
 
         lua_pop(L, 1);
     }
-
-    memcpy(audio_context.data.buffer_out, buffer, AUDIO_BUFFER_COUNT * sizeof(float));
 
     return 0;
 }
