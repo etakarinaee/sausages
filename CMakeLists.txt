@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 4.1)
 
 project(sausages C)
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 11)
 
 # glad must be its own target so -pedantic-errors does not apply on it
 add_library(glad STATIC lib/glad/glad.c)

@@ -239,14 +239,12 @@ static int l_check_point_rect(lua_State *L) {
 /* audio */
 ////////////////
 
-/* TODO: make all these functions better */
-
 static int l_get_audio_buffer(lua_State *L) {
     lua_newtable(L);
 
     for (int i = 0; i < AUDIO_BUFFER_COUNT; i++) {
         lua_pushinteger(L, i); // index
-        lua_pushnumber(L, audio_context.data.in.buf[i]);
+        lua_pushnumber(L, ring_buf_read(&audio_context.data.in));
         lua_settable(L, -3);
     }
 
@@ -421,11 +419,17 @@ static int l_server_broadcast(lua_State *L) {
     return 0;
 }
 
+static int l_server_broadcast_voice_chat(lua_State *L) {
+
+    return 0;
+}
+
 static const luaL_Reg server_methods[] = {
     {"poll", l_server_poll},
     {"send", l_server_send},
     {"broadcast", l_server_broadcast},
     {"close", l_server_close},
+    {"broadcast_voice_chat", l_server_broadcast_voice_chat},
     {"__gc", l_server_close},
     {NULL,NULL},
 };
@@ -449,6 +453,11 @@ static int l_client_new(lua_State *L) {
     lua_setmetatable(L, -2);
 
     return 1;
+}
+
+static int l_client_enable_voice_chat(lua_State *L) {
+
+    return 0;
 }
 
 static int l_client_poll(lua_State *L) {
@@ -497,6 +506,7 @@ static const luaL_Reg client_methods[] = {
     {"send", l_client_send},
     {"connected", l_client_connected},
     {"close", l_client_close},
+    {"enable_voice_chat", l_client_enable_voice_chat},
     {"__gc", l_client_close},
     {NULL, NULL}
 };

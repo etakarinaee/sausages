@@ -1,24 +1,45 @@
 
 #include "audio.h"
+#include <bits/time.h>
 #include <portaudio.h>
 
+#include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdint.h> 
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
+
+/* idk maybe not hardcode */
+#define SAMPLE_RATE 48000.0
 
 struct audio_context audio_context = {0};
 
 void ring_buf_write(struct ring_buf *ring, float val) {
-    ring->buf[ring->write_pos % AUDIO_BUFFER_RING_COUNT] = val;
-    ring->write_pos++;
+    int wp = atomic_load_explicit(&ring->write_pos, memory_order_relaxed);
+    int rp = atomic_load_explicit(&ring->read_pos, memory_order_acquire);
+
+    int available = AUDIO_BUFFER_RING_COUNT - (wp - rp);
+    if (available <= 0) return;
+    
+    ring->buf[wp % AUDIO_BUFFER_RING_COUNT] = val;
+
+    atomic_store_explicit(&ring->write_pos, wp + 1, memory_order_release);
 }
 
 float ring_buf_read(struct ring_buf *ring) {
-    float val = ring->buf[ring->read_pos % AUDIO_BUFFER_RING_COUNT];
-    ring->read_pos++;
+    int rp = atomic_load_explicit(&ring->read_pos, memory_order_relaxed);
+    int wp = atomic_load_explicit(&ring->write_pos, memory_order_acquire);
+
+    if (rp == wp) return 0.0f;
+
+    float val = ring->buf[rp % AUDIO_BUFFER_RING_COUNT];
+    
+    atomic_store_explicit(&ring->read_pos, rp + 1, memory_order_release);
+
     return val;
 }
 
@@ -31,58 +52,74 @@ static inline int check_err(PaError err) {
     return 0;
 }
 
+int ring_buf_available(struct ring_buf *ring) {
+    int wp = atomic_load_explicit(&ring->write_pos, memory_order_acquire);
+    int rp = atomic_load_explicit(&ring->read_pos, memory_order_relaxed);
+    return wp - rp;
+}
+
+static void *audio_send_thread(void *arg) {
+    struct audio_send_ctx *ctx = (struct audio_send_ctx*)arg;
+    int chunk_size = ctx->frames_per_chunk * ctx->channels;
+
+    float *chunk = malloc(chunk_size * sizeof(float));
+
+    /* interval in ns (frames / sample_rate) */
+    long interval_ns = (long)((ctx->frames_per_chunk / SAMPLE_RATE) * 1e9);
+
+    struct timespec next;
+    clock_gettime(CLOCK_MONOTONIC, &next);
+
+    while (atomic_load_explicit(&ctx->running, memory_order_relaxed)) {
+        clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
+
+        next.tv_nsec += interval_ns;
+        if (next.tv_nsec >= 1000000000L) {
+            next.tv_nsec -= 1000000000L;
+            next.tv_sec++;
+        }
+
+        if (ring_buf_available(ctx->in) >= chunk_size) {
+            for (int i = 0; i < chunk_size; i++) {
+                chunk[i] = ring_buf_read(ctx->in);
+            }
+            ctx->on_chunk_ready(chunk, chunk_size, ctx->userdata);
+        }
+    }
+
+    free(chunk);
+    return NULL;
+}
+
 static int audio_callback(const void* input_buf, void* out_buf, unsigned long frames_per_buf, 
                           const PaStreamCallbackTimeInfo *time_info, PaStreamCallbackFlags flags, void* user_data) {
-    (void)time_info;
-    (void)flags;
-
+    (void)time_info; (void)flags;
     struct audio_data* data = user_data;
-
-    float* in = (float*)input_buf;
     float* out = (float*)out_buf;
 
-    /* Input */
-    /* when input from microphone write it to in ring buffer to send it to other clients later */
+    /* write mic input to ring buffer for send thread to pick it up */
     if (input_buf) {
+        float* in = (float*)input_buf;
+
         for (int i = 0; i < frames_per_buf * data->channels_in; i++) {
-            ring_buf_write(&data->in, in[i]);
+            static float phase = 0.0f;
+            ring_buf_write(&data->in, 0.1f * sin(phase));
+            phase += 2.0f * 3.14159265359 * 440.0f / 48000.0f;
         }
     }
 
     /* Output */
-    if (data->channels_in == data->channels_out) {
-        for (unsigned long i = 0; i < frames_per_buf * data->channels_out; i++) {
-            if (data->out.read_pos != data->out.write_pos) {
-                out[i] = ring_buf_read(&data->out);
-            }
-            else {
-                /* buffer underflow just output silience*/
-                out[i] = 0.0f;
-            }
-        }
-    } 
-    else if (data->channels_in == 1 && data->channels_out == 2) {
-        for (unsigned long i = 0; i < frames_per_buf; i++) {
-            if (data->out.read_pos != data->out.write_pos) {
-                float sample = ring_buf_read(&data->out);
-                out[i] = sample;
-                out[i * 2 + 1] = sample; 
-            }
-            else {
-                out[i] = 0.0f;
-                out[i * 2 + 1] = 0.0f;
-            }
-        }
-    }
+    for (unsigned long i = 0; i < frames_per_buf; i++) {
+        float sample = ring_buf_read(&data->out);
 
-    /*
-    else if (data->channels_in == 2 && data->channels_out == 1) {
-        for (unsigned long i = 0; i < frames_per_buf; i++) {
-            float sample = 0.5f * (in[i * 2] + in[i * 2 + 1]);
+        if (data->channels_out == 1) {
             out[i] = sample;
         }
+        else {
+            out[i * 2] = sample;
+            out[i * 2 + 1] = sample;
+        }
     }
-    */
 
     return paContinue;
 }
@@ -117,7 +154,7 @@ static int create_stream(int dev_input, int dev_output) {
     audio_context.data.channels_out = output_param.channelCount;
 
     /* TODO: maybe not hardcode sample rate */
-    audio_context.err = Pa_OpenStream(&audio_context.stream, &input_param, &output_param, 48000,
+    audio_context.err = Pa_OpenStream(&audio_context.stream, &input_param, &output_param, SAMPLE_RATE,
                                       AUDIO_FRAMES_PER_BUFFER, paClipOff, audio_callback, &audio_context.data);
     if (check_err(audio_context.err)) {
         fprintf(stderr, "audio: failed to open stream\n");
@@ -158,10 +195,26 @@ int audio_init() {
 
     create_stream(dev_input, dev_output);
 
+    audio_context.send_ctx = (struct audio_send_ctx){
+        .in = &audio_context.data.in,
+        .frames_per_chunk = AUDIO_FRAMES_PER_BUFFER,
+        .channels = audio_context.data.channels_in,
+        .on_chunk_ready = audio_context.on_chunk_ready,
+        .userdata = audio_context.on_chunk_ready_userdata,
+    };
+
+    atomic_store(&audio_context.send_thread_running, true);
+    atomic_store(&audio_context.send_ctx.running, true);
+    pthread_create(&audio_context.send_thread, NULL, audio_send_thread, &audio_context.send_ctx);
+
+
     return 0;
 }
 
 void audio_deinit() {
+    atomic_store(&audio_context.send_ctx.running, false);
+    pthread_join(audio_context.send_thread, NULL);
+
     audio_context.err = Pa_StopStream(audio_context.stream);
     if (check_err(audio_context.err)) {
         fprintf(stderr, "audio: failed stopping stream\n");

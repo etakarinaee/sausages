@@ -31,7 +31,7 @@ end
 local function serialize_audio_buffer(buffer)
     local parts = {}
     for i = 1, #buffer do
-        parts[i] = string.format("%.4f", buffer[i])
+        parts[i] = string.format("%.6f", buffer[i])
     end
     return "audio: " .. table.concat(parts, ",")
 end
