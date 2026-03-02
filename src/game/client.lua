@@ -100,13 +100,11 @@ function game_update(delta_time)
                 elseif msg_type == "left" then
                     players[id] = nil
                 elseif msg_type == "audio" then
-                    if id ~= local_id then
-                        local numbers = {}
-                        for num in payload:gmatch("[^,]+") do
-                            table.insert(numbers, tonumber(num))
-                        end
-                        core.write_audio_buffer(numbers)
+                    local numbers = {}
+                    for num in a:gmatch("[^,]+") do
+                        table.insert(numbers, tonumber(num))
                     end
+                    core.write_audio_buffer(numbers)
                 end
             end
         end

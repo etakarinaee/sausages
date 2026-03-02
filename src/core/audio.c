@@ -28,20 +28,21 @@ static int audio_callback(const void* input_buf, void* out_buf, unsigned long fr
 
     struct audio_data* data = user_data;
 
-    memset(data->buffer_out, 0, AUDIO_FRAMES_PER_BUFFER * sizeof(float));
+    //memset(data->buffer_out, 0, AUDIO_FRAMES_PER_BUFFER * sizeof(float));
 
     if (input_buf) {
-        memcpy(data->buffer_in, input_buf, AUDIO_FRAMES_PER_BUFFER * sizeof(float));
+        memcpy(data->buffer_in, input_buf, AUDIO_BUFFER_COUNT * sizeof(float));
     }
 
+    /*
     if (data->buffer_out[0] == AUDIO_INPUT_NOT_AVAILALBE) {
         float* out = (float*)out_buf;
         for (unsigned long i = 0; i < frames_per_buf * data->channels_out; i++)
             out[i] = 0.0f;
         return paContinue;
     }
+    */
 
-    /* skip first element in buffer */
     float* in = data->buffer_out;
     float* out = (float*)out_buf;
 

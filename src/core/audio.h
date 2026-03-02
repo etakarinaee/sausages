@@ -10,6 +10,9 @@
 
 #define AUDIO_FRAMES_PER_BUFFER 512
 
+/* for max 2 channels 2x */
+#define AUDIO_BUFFER_COUNT AUDIO_FRAMES_PER_BUFFER * 2
+
 enum {
     AUDIO_INPUT_AVAILABLE,
     AUDIO_INPUT_NOT_AVAILALBE,
@@ -28,8 +31,8 @@ struct audio_data {
         buffer[0] always indicates if we want to play any data 
         if data then buffer[0] == AUDIO_INPUT_AVAILABLE 
     */
-    float buffer_out[AUDIO_FRAMES_PER_BUFFER * 2];
-    float buffer_in[AUDIO_FRAMES_PER_BUFFER  * 2];
+    float buffer_out[AUDIO_BUFFER_COUNT]; 
+    float buffer_in[AUDIO_BUFFER_COUNT];
 };
 
 struct audio_context {
