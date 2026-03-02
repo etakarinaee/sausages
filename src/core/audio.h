@@ -28,8 +28,8 @@ struct audio_data {
         buffer[0] always indicates if we want to play any data 
         if data then buffer[0] == AUDIO_INPUT_AVAILABLE 
     */
-    float buffer_out[AUDIO_FRAMES_PER_BUFFER + 1];
-    float buffer_in[AUDIO_FRAMES_PER_BUFFER];
+    float buffer_out[AUDIO_FRAMES_PER_BUFFER * 2];
+    float buffer_in[AUDIO_FRAMES_PER_BUFFER  * 2];
 };
 
 struct audio_context {

@@ -42,7 +42,7 @@ static int audio_callback(const void* input_buf, void* out_buf, unsigned long fr
     }
 
     /* skip first element in buffer */
-    float* in = data->buffer_out + 1;
+    float* in = data->buffer_out;
     float* out = (float*)out_buf;
 
     if (data->channels_in == data->channels_out) {

@@ -105,7 +105,7 @@ function game_update(delta_time)
                         for num in payload:gmatch("[^,]+") do
                             table.insert(numbers, tonumber(num))
                         end
-                        --core.write_audio_buffer(numbers)
+                        core.write_audio_buffer(numbers)
                     end
                 end
             end
