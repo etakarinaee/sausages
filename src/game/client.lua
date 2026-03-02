@@ -53,8 +53,10 @@ local font = core.load_font("../AdwaitaSans-Regular.ttf", 48, {32, 128})
 
 function game_init()
     local ip = os.getenv("SAUSAGES_IP") or "127.0.0.1"
-    client = core.client.new(ip, 7777)
-    core.print("connecting to " .. ip .. ":7777")
+    local port = tonumber(os.getenv("SAUSAGES_PORT")) or 7777
+    
+    client = core.client.new(ip, port)
+    core.print("connecting to " .. ip .. ":" .. port)
 end
 
 local tick_rate = 1.0 / 120.0
