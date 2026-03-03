@@ -54,6 +54,7 @@ set(CORE_SOURCES
         src/core/cmath.c
         src/core/local.c
         src/core/ui.c
+        src/core/input.c
 )
 
 # Freetype2

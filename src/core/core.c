@@ -8,6 +8,7 @@
 #include <luajit-2.1/lua.h>
 
 #include "archive.h"
+#include "input.h"
 #include "local.h"
 #include "lua.h"
 #include "renderer.h"
@@ -64,6 +65,7 @@ int main(void) {
 
     // TODO: any calls to renderer in server would segfault
     renderer_init(&render_context);
+    input_init(&input_context, window);
 #endif
 
     L = lua_init(SAUSAGES_DATA, ENTRY);
@@ -94,6 +96,8 @@ int main(void) {
         const double current_time = glfwGetTime();
         const double delta_time = current_time - last_time;
         last_time = current_time;
+
+        input_update(&input_context);
 
         L = lua_reload(L, SAUSAGES_DATA, ENTRY);
         lua_call_update(L, delta_time);

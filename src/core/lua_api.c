@@ -13,6 +13,7 @@
 #include "cmath.h"
 #include "ui.h"
 #include "collision.h"
+#include "input.h"
 
 // metatables
 #define SERVER_MT "net_server"
@@ -79,7 +80,7 @@ static int l_print(lua_State *L) {
 }
 
 ////////////////
-/* rendering */ 
+/* rendering */
 ////////////////
 
 static int l_get_screen_dimensions(lua_State *L) {
@@ -146,7 +147,7 @@ static int l_push_text(lua_State *L) {
     const struct vec2 pos = check_vec2(L, 3);
     float scale = luaL_checknumber(L, 4);
     const struct color3 color = check_color3(L, 5);
-    
+
     renderer_push_text(&render_context, pos, scale, color, font, text, ANCHOR_BOTTOM_LEFT);
 
     return 0;
@@ -154,12 +155,12 @@ static int l_push_text(lua_State *L) {
 
 static int l_push_text_ex(lua_State *L) {
     const int font = luaL_checkint(L, 1);
-    const char* text = luaL_checkstring(L, 2);
+    const char *text = luaL_checkstring(L, 2);
     const struct vec2 pos = check_vec2(L, 3);
     float scale = luaL_checknumber(L, 4);
     const struct color3 color = check_color3(L, 5);
     const int anchor = luaL_checkint(L, 6);
-    
+
     renderer_push_text(&render_context, pos, scale, color, font, text, anchor);
 
     return 0;
@@ -172,7 +173,7 @@ static int l_load_texture(lua_State *L) {
 }
 
 static int l_load_font(lua_State *L) {
-    const char* text = luaL_checkstring(L, 1);
+    const char *text = luaL_checkstring(L, 1);
     const int font_size = luaL_checkint(L, 2);
     const struct vec2i range = check_vec2i(L, 3);
 
@@ -182,12 +183,12 @@ static int l_load_font(lua_State *L) {
 }
 
 ////////////////
-/* ui */ 
+/* ui */
 ////////////////
 
 static int l_button(lua_State *L) {
     const int font = luaL_checkint(L, 1);
-    const char* text = luaL_checkstring(L, 2);   
+    const char *text = luaL_checkstring(L, 2);
     const struct vec2 pos = check_vec2(L, 3);
     const struct vec2i size = check_vec2i(L, 4);
 
@@ -207,10 +208,10 @@ static int l_button(lua_State *L) {
 static int l_check_point_circle(lua_State *L) {
     const struct vec2 p = check_vec2(L, 1);
     const struct vec2 center = check_vec2(L, 2);
-    const float radius = (float)luaL_checknumber(L, 3);
+    const float radius = (float) luaL_checknumber(L, 3);
 
     bool in = coll_check_point_circle(p, center, radius);
-    if (in) { 
+    if (in) {
         lua_pushinteger(L, in);
         return 1;
     }
@@ -224,7 +225,7 @@ static int l_check_point_rect(lua_State *L) {
     const struct vec2 size = check_vec2(L, 3);
 
     bool in = coll_check_point_rect(p, pos, size);
-    if (in) { 
+    if (in) {
         lua_pushinteger(L, in);
         return 1;
     }
@@ -236,42 +237,69 @@ static int l_check_point_rect(lua_State *L) {
 /* input */
 ////////////////
 
-static int l_key_pressed(lua_State *L) {
-    if (glfwGetKey(render_context.window, luaL_checkint(L, 1)) == GLFW_PRESS) {
-        lua_pushinteger(L, 1);
-        return 1;
-    }
-    return 0;
-}
-
 static int l_key_down(lua_State *L) {
-    if (glfwGetKey(render_context.window, luaL_checkint(L, 1)) != GLFW_RELEASE) {
+    if (input_key_down(&input_context, luaL_checkint(L, 1))) {
         lua_pushinteger(L, 1);
+
         return 1;
     }
+
     return 0;
 }
 
-static int l_mouse_pressed(lua_State *L) {
-    if (glfwGetMouseButton(render_context.window, luaL_checkint(L, 1)) == GLFW_PRESS) {
+static int l_key_just_down(lua_State *L) {
+    if (input_key_just_down(&input_context, luaL_checkint(L, 1))) {
         lua_pushinteger(L, 1);
+
         return 1;
     }
+
+    return 0;
+}
+
+static int l_key_just_up(lua_State *L) {
+    if (input_key_just_up(&input_context, luaL_checkint(L, 1))) {
+        lua_pushinteger(L, 1);
+
+        return 1;
+    }
+
     return 0;
 }
 
 static int l_mouse_down(lua_State *L) {
-    if (glfwGetMouseButton(render_context.window, luaL_checkint(L, 1)) != GLFW_RELEASE) {
+    if (input_mouse_down(&input_context, luaL_checkint(L, 1))) {
         lua_pushinteger(L, 1);
+
         return 1;
     }
+
     return 0;
 }
 
-static int l_mouse_pos(lua_State *L) {
+static int l_mouse_just_down(lua_State *L) {
+    if (input_mouse_just_down(&input_context, luaL_checkint(L, 1))) {
+        lua_pushinteger(L, 1);
+
+        return 1;
+    }
+
+    return 0;
+}
+
+static int l_mouse_just_up(lua_State *L) {
+    if (input_mouse_just_up(&input_context, luaL_checkint(L, 1))) {
+        lua_pushinteger(L, 1);
+        return 1;
+    }
+
+    return 0;
+}
+
+static int l_mouse_position(lua_State *L) {
     double x;
     double y;
-    glfwGetCursorPos(render_context.window, &x, &y);
+    input_mouse_position(&input_context, &x, &y);
 
     lua_newtable(L);
     lua_pushnumber(L, x);
@@ -314,7 +342,7 @@ static int push_event(lua_State *L, const struct net_event *event) {
 // server
 
 static int l_server_new(lua_State *L) {
-    const char* ip = luaL_checkstring(L, 1);
+    const char *ip = luaL_checkstring(L, 1);
     const uint16_t port = (uint16_t) luaL_checkint(L, 2);
     const uint32_t n = (uint32_t) luaL_optint(L, 3, 32);
 
@@ -528,56 +556,105 @@ static const luaL_Reg api[] = {
     {"local_current_locale", l_local_current_locale},
 
     /* Input */
-    {"key_pressed", l_key_pressed},
     {"key_down", l_key_down},
-    {"mouse_pressed", l_mouse_pressed},
+    {"key_just_down", l_key_just_down},
+    {"key_just_up", l_key_just_up},
     {"mouse_down", l_mouse_down},
-    {"mouse_pos", l_mouse_pos},
+    {"mouse_just_down", l_mouse_just_down},
+    {"mouse_just_up", l_mouse_just_up},
+    {"mouse_position", l_mouse_position},
     {NULL, NULL},
 };
 
 static void keys_init(lua_State *L) {
     int i;
-    char k[2];
-    k[1] = '\0';
+    char key[2];
+    key[1] = '\0';
 
     lua_newtable(L);
 
-    for (i = 'A'; i <= 'Z'; i++) {
+    for (i = GLFW_KEY_A; i <= GLFW_KEY_Z; i++) {
         lua_pushinteger(L, i);
-        k[0] = (char) (i + 'a' - 'A');
-        lua_setfield(L, -2, k);
+        key[0] = (char) (i - GLFW_KEY_A + 'a');
+        lua_setfield(L, -2, key);
     }
 
-    for (i = 'A'; i <= 'Z'; i++) {
+    for (i = GLFW_KEY_A; i <= GLFW_KEY_Z; i++) {
         lua_pushinteger(L, i);
-        k[0] = (char) i;
-        lua_setfield(L, -2, k);
+        key[0] = (char) (i - GLFW_KEY_A + 'A');
+        lua_setfield(L, -2, key);
     }
 
-    for (i = '0'; i <= '9'; i++) {
+    for (i = GLFW_KEY_0; i <= GLFW_KEY_9; i++) {
         lua_pushinteger(L, i);
-        k[0] = (char) i;
-        lua_setfield(L, -2, k);
+        key[0] = (char) (i - GLFW_KEY_0 + '0');
+        lua_setfield(L, -2, key);
     }
 
-    lua_pushinteger(L, ' ');
+    lua_pushinteger(L, GLFW_KEY_SPACE);
     lua_setfield(L, -2, "space");
 
-    lua_pushinteger(L, '\r');
+    lua_pushinteger(L, GLFW_KEY_ENTER);
     lua_setfield(L, -2, "return");
 
-    lua_pushinteger(L, '\n');
+    lua_pushinteger(L, GLFW_KEY_ENTER);
     lua_setfield(L, -2, "enter");
 
-    lua_pushinteger(L, '\t');
+    lua_pushinteger(L, GLFW_KEY_TAB);
     lua_setfield(L, -2, "tab");
 
-    lua_pushinteger(L, 27);
+    lua_pushinteger(L, GLFW_KEY_ESCAPE);
     lua_setfield(L, -2, "escape");
 
-    lua_pushinteger(L, 127);
+    lua_pushinteger(L, GLFW_KEY_BACKSPACE);
     lua_setfield(L, -2, "backspace");
+
+    lua_pushinteger(L, GLFW_KEY_LEFT_SHIFT);
+    lua_setfield(L, -2, "left_shift");
+
+    lua_pushinteger(L, GLFW_KEY_RIGHT_SHIFT);
+    lua_setfield(L, -2, "right_shift");
+
+    lua_pushinteger(L, GLFW_KEY_LEFT_CONTROL);
+    lua_setfield(L, -2, "left_control");
+
+    lua_pushinteger(L, GLFW_KEY_RIGHT_CONTROL);
+    lua_setfield(L, -2, "right_control");
+
+    lua_pushinteger(L, GLFW_KEY_LEFT_ALT);
+    lua_setfield(L, -2, "left_alt");
+
+    lua_pushinteger(L, GLFW_KEY_RIGHT_ALT);
+    lua_setfield(L, -2, "right_alt");
+
+    lua_pushinteger(L, GLFW_KEY_UP);
+    lua_setfield(L, -2, "up");
+
+    lua_pushinteger(L, GLFW_KEY_DOWN);
+    lua_setfield(L, -2, "down");
+
+    lua_pushinteger(L, GLFW_KEY_LEFT);
+    lua_setfield(L, -2, "left");
+
+    lua_pushinteger(L, GLFW_KEY_RIGHT);
+    lua_setfield(L, -2, "right");
+
+    lua_pushinteger(L, GLFW_KEY_DELETE);
+    lua_setfield(L, -2, "delete");
+
+    lua_pushinteger(L, GLFW_KEY_HOME);
+    lua_setfield(L, -2, "home");
+
+    lua_pushinteger(L, GLFW_KEY_END);
+    lua_setfield(L, -2, "end");
+
+    for (i = 0; i < 12; i++) {
+        char name[4];
+        snprintf(name, sizeof(name), "f%d", i + 1);
+
+        lua_pushinteger(L, GLFW_KEY_F1 + i);
+        lua_setfield(L, -2, name);
+    }
 
     lua_setglobal(L, "key");
 }
