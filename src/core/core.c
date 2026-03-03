@@ -99,7 +99,6 @@ int main(void) {
 
         input_update(&input_context);
 
-        L = lua_reload(L, SAUSAGES_DATA, ENTRY);
         lua_call_update(L, delta_time);
 
         input_clear_text(&input_context);
