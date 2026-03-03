@@ -3,7 +3,6 @@
 
 Debian:
 ```bash
-sudo apt update
 sudo apt install libfreetype6-dev libglfw3-dev portaudio19-dev luaji
 ```
 
@@ -12,8 +11,13 @@ Arch:
 sudo pacman -S freetype2 glfw portaudio luajit
 ```
 
-# Build 
+Fedora:
+```bash
+sudo dnf install freetype-devel glfw-devel portaudio-devel luajit-devel
 ```
+
+# Build 
+```bash
 git clone https://github.com/etakarinaee/sausages.git
 cd sausage
 mkdir build
@@ -28,11 +32,12 @@ cmake --build .
 SAUSAGES_IP= ./server
 
 # client
-SAUSAGES_IP= SAUSAGES_NICKNAME= ./client
+SAUSAGES_IP= SAUSAGES_PORT= SAUSAGES_NICKNAME= ./client
 ```
 
 - `SAUSAGES_IP` is IPv4, where the server is hosted and where the client connects, default is `127.0.0.1`
 - `SAUSAGES_NICKNAME` is the nickname used in-game, default is `Player`
+- `SAUSAGES_PORT` self-explanatory, defaults to 7777
 
 # Gallery
 
