@@ -311,6 +311,19 @@ static int l_mouse_position(lua_State *L) {
     return 1;
 }
 
+static int l_get_text_input(lua_State *L) {
+    int len;
+    const char *text = input_get_text(&input_context, &len);
+
+    if (len > 0) {
+        lua_pushlstring(L, text, len);
+
+        return 1;
+    }
+
+    return 0;
+}
+
 ////////////////
 /* networking */
 ////////////////
@@ -563,6 +576,7 @@ static const luaL_Reg api[] = {
     {"mouse_just_down", l_mouse_just_down},
     {"mouse_just_up", l_mouse_just_up},
     {"mouse_position", l_mouse_position},
+    {"get_text_input", l_get_text_input},
     {NULL, NULL},
 };
 
