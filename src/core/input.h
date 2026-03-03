@@ -44,4 +44,6 @@ void input_mouse_position(const struct input_context *ctx, double *x, double *y)
 // return result is valid until the next call to `input_update`
 const char *input_get_text(const struct input_context *ctx, int *len);
 
+void input_clear_text(struct input_context *ctx);
+
 #endif // INPUT_H

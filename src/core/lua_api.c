@@ -201,6 +201,21 @@ static int l_button(lua_State *L) {
     return 0;
 }
 
+static int l_screen_to_world(lua_State *L) {
+    const struct vec2 screen_pos = check_vec2(L, 1);
+
+    int width, height;
+    glfwGetWindowSize(render_context.window, &width, &height);
+
+    lua_newtable(L);
+    lua_pushnumber(L, screen_pos.x - width / 2.0f);
+    lua_rawseti(L, -2, 1);
+    lua_pushnumber(L, height / 2.0f - screen_pos.y);
+    lua_rawseti(L, -2, 2);
+
+    return 1;
+}
+
 ////////////////
 /* collision */
 ////////////////
@@ -558,6 +573,7 @@ static const luaL_Reg api[] = {
 
     /* ui */
     {"button", l_button},
+    {"screen_to_world", l_screen_to_world},
 
     /* collison */
     {"check_point_circle", l_check_point_circle},

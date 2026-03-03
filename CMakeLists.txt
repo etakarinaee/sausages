@@ -29,6 +29,7 @@ set(ARC_INPUTS
         ${CMAKE_SOURCE_DIR}/src/game/client.lua
         ${CMAKE_SOURCE_DIR}/src/game/server.lua
         ${CMAKE_SOURCE_DIR}/src/game/physics.lua
+        ${CMAKE_SOURCE_DIR}/src/game/chat.lua
 
         ${CMAKE_SOURCE_DIR}/data/locales/en.txt
         ${CMAKE_SOURCE_DIR}/data/locales/ru.txt

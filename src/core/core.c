@@ -102,6 +102,8 @@ int main(void) {
         L = lua_reload(L, SAUSAGES_DATA, ENTRY);
         lua_call_update(L, delta_time);
 
+        input_clear_text(&input_context);
+
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 

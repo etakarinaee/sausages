@@ -45,9 +45,6 @@ void input_update(struct input_context *ctx) {
     memcpy(ctx->key_previous, ctx->key_current, sizeof(ctx->key_current));
     memcpy(ctx->mouse_previous, ctx->mouse_current, sizeof(ctx->mouse_current));
 
-    ctx->text_buffer_len = 0;
-    ctx->text_buffer[0] = '\0';
-
     for (int i = 0; i <= GLFW_KEY_LAST; i++) {
         ctx->key_current[i] = glfwGetKey(ctx->window, i);
     }
@@ -115,4 +112,9 @@ const char *input_get_text(const struct input_context *ctx, int *len) {
     }
 
     return ctx->text_buffer;
+}
+
+void input_clear_text(struct input_context *ctx) {
+    ctx->text_buffer_len = 0;
+    ctx->text_buffer[0] = '\0';
 }

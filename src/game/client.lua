@@ -1,8 +1,9 @@
 local client = nil
+
 local physics = require('physics')
+local chat = require('chat')
 
 local local_id = nil
-local local_nickname = os.getenv("SAUSAGES_NICKNAME") or "Player"
 local players = {}
 
 local platform = { x = 0.0, y = -0.5, w = 800, h = 100 }
@@ -49,7 +50,9 @@ local function deserialize_message(data)
 end
 
 local image = core.load_texture("../test.png")
-local font = core.load_font("../AdwaitaSans-Regular.ttf", 48, {32, 128})
+
+font = core.load_font("../AdwaitaSans-Regular.ttf", 48, {32, 128})
+local_nickname = os.getenv("SAUSAGES_NICKNAME") or "Player"
 
 function game_init()
     local ip = os.getenv("SAUSAGES_IP") or "127.0.0.1"
@@ -63,6 +66,8 @@ local tick_rate = 1.0 / 120.0
 local accumulator = 0.0
 
 function game_update(delta_time)
+    chat.update()
+
     local ev = client:poll()
     while ev do
         if ev.type == core.net_event.connect then
@@ -107,11 +112,13 @@ function game_update(delta_time)
     while accumulator >= tick_rate do
         accumulator = accumulator - tick_rate
 
-        if core.key_down(key.a) then
-            local_player.vx = local_player.vx - speed * tick_rate
-        end
-        if core.key_down(key.d) then
-            local_player.vx = local_player.vx + speed * tick_rate
+        if not chat.is_active() then
+            if core.key_down(key.a) then
+                local_player.vx = local_player.vx - speed * tick_rate
+            end
+            if core.key_down(key.d) then
+                local_player.vx = local_player.vx + speed * tick_rate
+            end
         end
 
         local_player.vy = local_player.vy + gravity * tick_rate
@@ -144,6 +151,8 @@ function game_update(delta_time)
     if core.button(font, "button", {0, 0}, {300, 100}) then
         core.print("YOO")
     end
+
+    chat.draw()
 end
 
 function game_quit()
