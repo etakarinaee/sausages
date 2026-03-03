@@ -3,6 +3,7 @@ local chat = {}
 local messages = {}
 local buffer = ''
 local active = false
+local outgoing = {}
 
 function chat.update()
     if core.key_just_down(key.t) and not active then
@@ -27,6 +28,7 @@ function chat.update()
     if core.key_just_down(key.enter) then
         if #buffer > 0 then
             chat.add(local_nickname, buffer)
+            table.insert(outgoing, buffer)
         end
         buffer = ""
         active = false
@@ -53,7 +55,8 @@ function chat.draw()
     end
 
     for i = #messages, math.max(1, #messages - 9), -1 do
-        core.push_text(font, messages[i], {x, y}, 18, {1, 1, 1})
+        local msg = messages[i]
+        core.push_text(font, msg.text, {x, y}, 18, msg.color)
         y = y + 22
     end
 end
@@ -62,9 +65,25 @@ function chat.is_active()
     return active
 end
 
-function chat.add(name, message)
-    table.insert(messages, "<" .. name .. "> " .. message)
+function chat.add(name, message, color)
+    table.insert(messages, {
+        text = "<" .. name .. "> " .. message,
+        color = color or {1, 1, 1},
+    })
 end
 
+function chat.send(message, color)
+    table.insert(messages, {
+        text = message,
+        color = color or {1, 1, 1},
+    })
+end
+
+function chat.poll_outgoing()
+    if #outgoing == 0 then
+        return nil
+    end
+    return table.remove(outgoing, 1)
+end
 
 return chat
