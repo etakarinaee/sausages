@@ -83,7 +83,6 @@ int main(void) {
         const double delta_time = current_time - last_time;
         last_time = current_time;
 
-        L = lua_reload(L, SAUSAGES_DATA, ENTRY);
         lua_call_update(L, delta_time);
 
         usleep(1000);
