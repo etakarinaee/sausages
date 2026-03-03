@@ -1,8 +1,9 @@
 local client = nil
+
 local physics = require('physics')
+local chat = require('chat')
 
 local local_id = nil
-local local_nickname = os.getenv("SAUSAGES_NICKNAME") or "Player"
 local players = {}
 
 local platform = { x = 0.0, y = -0.5, w = 800, h = 100 }
@@ -43,18 +44,26 @@ local function deserialize_message(data)
         return id, "nickname", payload
     elseif msg_type == "left" then
         return id, "left", nil
+    elseif msg_type == "chat" then
+        return id, "chat", payload
+    elseif msg_type == "join" then
+        return id, "join", payload
+    elseif msg_type == "leave" then
+        return id, "leave", payload
     end
 
     return nil
 end
 
 local image = core.load_texture("../test.png")
-local font = core.load_font("../AdwaitaSans-Regular.ttf", 48, {32, 128})
+
+font = core.load_font("../AdwaitaSans-Regular.ttf", 48, {32, 128})
+local_nickname = os.getenv("SAUSAGES_NICKNAME") or "Player"
 
 function game_init()
     local ip = os.getenv("SAUSAGES_IP") or "127.0.0.1"
     local port = tonumber(os.getenv("SAUSAGES_PORT")) or 7777
-    
+
     client = core.client.new(ip, port)
     core.print("connecting to " .. ip .. ":" .. port)
 end
@@ -63,6 +72,14 @@ local tick_rate = 1.0 / 120.0
 local accumulator = 0.0
 
 function game_update(delta_time)
+    chat.update()
+
+    local msg = chat.poll_outgoing()
+    while msg do
+        client:send("chat:" .. msg)
+        msg = chat.poll_outgoing()
+    end
+
     local ev = client:poll()
     while ev do
         if ev.type == core.net_event.connect then
@@ -75,21 +92,28 @@ function game_update(delta_time)
         elseif ev.type == core.net_event.data then
             local id, msg_type, a, b = deserialize_message(ev.data)
 
-            if id and id ~= local_id then
-                if msg_type == "pos" then
+            if id then
+                if msg_type == "pos" and id ~= local_id then
                     if not players[id] then
                         players[id] = new_player()
                     end
                     players[id].x = a
                     players[id].y = b
-                elseif msg_type == "nickname" then
+                elseif msg_type == "nickname" and id ~= local_id then
                     if not players[id] then
                         players[id] = new_player(a)
                     else
                         players[id].nickname = a
                     end
-                elseif msg_type == "left" then
+                elseif msg_type == "left" and id ~= local_id then
+                    local name = players[id] and players[id].nickname or ("Player" .. id)
+                    chat.send(name .. " left the game", {1, 1, 0})
                     players[id] = nil
+                elseif msg_type == "join" then
+                    chat.send(a .. " joined the game", {1, 1, 0})
+                elseif msg_type == "chat" then
+                    local name = players[id] and players[id].nickname or ("Player" .. id)
+                    chat.add(name, a)
                 end
             end
         end
@@ -107,11 +131,13 @@ function game_update(delta_time)
     while accumulator >= tick_rate do
         accumulator = accumulator - tick_rate
 
-        if core.key_down(key.a) then
-            local_player.vx = local_player.vx - speed * tick_rate
-        end
-        if core.key_down(key.d) then
-            local_player.vx = local_player.vx + speed * tick_rate
+        if not chat.is_active() then
+            if core.key_down(key.a) then
+                local_player.vx = local_player.vx - speed * tick_rate
+            end
+            if core.key_down(key.d) then
+                local_player.vx = local_player.vx + speed * tick_rate
+            end
         end
 
         local_player.vy = local_player.vy + gravity * tick_rate
@@ -144,6 +170,8 @@ function game_update(delta_time)
     if core.button(font, "button", {0, 0}, {300, 100}) then
         core.print("YOO")
     end
+
+    chat.draw()
 end
 
 function game_quit()

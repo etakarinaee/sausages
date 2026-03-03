@@ -92,28 +92,6 @@ void lua_quit(lua_State *L) {
     }
 }
 
-lua_State *lua_reload(lua_State *L, const char *archive, const char *entry) {
-    /* the new lua state */
-
-    const long mtime = fmtime(archive);
-    if (mtime <= last_mtime) {
-        return L;
-    }
-
-    lua_State *N = lua_init(archive, entry);
-    if (!N) {
-        last_mtime = mtime;
-
-        return L;
-    }
-
-    lua_call_quit(L);
-    lua_close(L);
-    lua_call_init(N);
-
-    return N;
-}
-
 void lua_call_init(lua_State *L) {
     if (push(L, "game_init") == 0) {
         call(L, "game_init", 0);
