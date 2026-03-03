@@ -28,14 +28,6 @@ local function serialize_position(player)
     return string.format("pos:%.4f,%.4f", player.x, player.y)
 end
 
-local function serialize_audio_buffer(buffer)
-    local parts = {}
-    for i = 1, #buffer do
-        parts[i] = string.format("%.6f", buffer[i])
-    end
-    return "audio: " .. table.concat(parts, ",")
-end
-
 local function deserialize_message(data)
     local id, msg_type, payload = data:match("^(%d+):(%w+):(.+)$")
     if not id then
@@ -52,10 +44,7 @@ local function deserialize_message(data)
         return id, "nickname", payload
     elseif msg_type == "left" then
         return id, "left", nil
-    elseif msg_type == "audio" then
-        return id, "audio", payload
     end
-
     return nil
 end
 
@@ -68,6 +57,8 @@ function game_init()
     
     client = core.client.new(ip, port)
     core.print("connecting to " .. ip .. ":" .. port)
+
+    client:enable_voice_chat()
 end
 
 local tick_rate = 1.0 / 120.0
@@ -101,12 +92,6 @@ function game_update(delta_time)
                     end
                 elseif msg_type == "left" then
                     players[id] = nil
-                elseif msg_type == "audio" then
-                    local numbers = {}
-                    for num in a:gmatch("[^,]+") do
-                        table.insert(numbers, tonumber(num))
-                    end
-                    core.write_audio_buffer(numbers)
                 end
             end
         end
@@ -151,9 +136,6 @@ function game_update(delta_time)
     end
 
     client:send(serialize_position(local_player))
-
-    local buffer = core.get_audio_buffer()
-    client:send(serialize_audio_buffer(buffer))
 
     core.push_rect({platform.x, platform.y}, {platform.w, platform.h}, {0.3, 0.7, 0.3})
     for id, player in pairs(players) do

@@ -1,6 +1,7 @@
 
 #include "audio.h"
-#include <bits/time.h>
+#include "net.h"
+
 #include <portaudio.h>
 
 #include <pthread.h>
@@ -58,7 +59,7 @@ int ring_buf_available(struct ring_buf *ring) {
     return wp - rp;
 }
 
-static void *audio_send_thread(void *arg) {
+void *audio_send_thread(void *arg) {
     struct audio_send_ctx *ctx = (struct audio_send_ctx*)arg;
     int chunk_size = ctx->frames_per_chunk * ctx->channels;
 
@@ -89,6 +90,20 @@ static void *audio_send_thread(void *arg) {
 
     free(chunk);
     return NULL;
+}
+
+void on_chunk_ready(float *samples, int count, void* userdata) {
+    /* increase complexity later */
+    struct net_client *cp = userdata;
+    if (!cp) {
+        fprintf(stderr, "audio: voice chat client is NULL did you call client:enable_voice_chat()?\n");
+        return;
+    }
+
+    float buf[count + 1];
+    memcpy(buf + 1, samples, count);
+    *(uint32_t*)(&buf[0]) = AUDIO_MAGIC;
+    net_client_send(cp, samples, count);
 }
 
 static int audio_callback(const void* input_buf, void* out_buf, unsigned long frames_per_buf, 
@@ -194,19 +209,6 @@ int audio_init() {
     }
 
     create_stream(dev_input, dev_output);
-
-    audio_context.send_ctx = (struct audio_send_ctx){
-        .in = &audio_context.data.in,
-        .frames_per_chunk = AUDIO_FRAMES_PER_BUFFER,
-        .channels = audio_context.data.channels_in,
-        .on_chunk_ready = audio_context.on_chunk_ready,
-        .userdata = audio_context.on_chunk_ready_userdata,
-    };
-
-    atomic_store(&audio_context.send_thread_running, true);
-    atomic_store(&audio_context.send_ctx.running, true);
-    pthread_create(&audio_context.send_thread, NULL, audio_send_thread, &audio_context.send_ctx);
-
 
     return 0;
 }

@@ -5,13 +5,17 @@
 #include <portaudio.h>
 #include <stdatomic.h>
 #include <pthread.h>
+#include <stdbool.h> 
 
 #define AUDIO_FRAMES_PER_BUFFER 512
 
-/* for max 2 channels 2x */
+    /* for max 2 channels 2x */
 #define AUDIO_BUFFER_COUNT (AUDIO_FRAMES_PER_BUFFER * 2)
 
 #define AUDIO_BUFFER_RING_COUNT (AUDIO_BUFFER_COUNT * 8)
+
+#define AUDIO_MAGIC 0x676767Au
+#define AUDIO_MAGIC_SIZE sizeof(uint32_t)
 
 enum {
     AUDIO_INPUT_AVAILABLE,
@@ -30,7 +34,7 @@ struct audio_send_ctx {
     struct ring_buf *in;
     _Atomic bool running;
 
-    on_chunk_ready_fn on_chunk_ready;;
+    on_chunk_ready_fn on_chunk_ready;
     void *userdata;
     int frames_per_chunk; // == AUDIO_FRAMES_PER_BUFFER
     int channels;
@@ -73,6 +77,9 @@ void audio_deinit();
 void ring_buf_write(struct ring_buf *ring, float val);
 float ring_buf_read(struct ring_buf *ring);
 int ring_buf_available(struct ring_buf *ring);
+
+void *audio_send_thread(void *arg);
+ void on_chunk_ready(float *samples, int count, void* userdata);
 
 #endif // AUDIO_H
 

@@ -456,6 +456,21 @@ static int l_client_new(lua_State *L) {
 }
 
 static int l_client_enable_voice_chat(lua_State *L) {
+    struct net_client **cp = luaL_checkudata(L, 1, CLIENT_MT);
+    audio_context.on_chunk_ready_userdata = *cp;
+    audio_context.on_chunk_ready = on_chunk_ready;
+
+    audio_context.send_ctx = (struct audio_send_ctx){
+        .in = &audio_context.data.in,
+        .frames_per_chunk = AUDIO_FRAMES_PER_BUFFER,
+        .channels = audio_context.data.channels_in,
+        .on_chunk_ready = audio_context.on_chunk_ready,
+        .userdata = audio_context.on_chunk_ready_userdata,
+    };
+
+    atomic_store(&audio_context.send_thread_running, true);
+    atomic_store(&audio_context.send_ctx.running, true);
+    pthread_create(&audio_context.send_thread, NULL, audio_send_thread, &audio_context.send_ctx);
 
     return 0;
 }

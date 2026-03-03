@@ -35,10 +35,6 @@ function game_update(dt)
                 for id, _ in pairs(clients) do
                     server:send(id, ev.id .. ":pos:" .. payload)
                 end
-            elseif msg_type == "audio" then 
-                for id, _ in pairs(clients) do 
-                    server:send(id, ev.id  .. ":audio:" .. payload)
-                end
             end
         end
         ev = server:poll()
