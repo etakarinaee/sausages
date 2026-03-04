@@ -16,7 +16,7 @@
 
 /* idk maybe not hardcode */
 #define SAMPLE_RATE 48000.0
-#define PLAYBACK_PREBUFFER_CHUNKS 4 
+#define PLAYBACK_PREBUFFER_CHUNKS 4
 #define PLAYBACK_PREBUFFER_SAMPLES (PLAYBACK_PREBUFFER_CHUNKS * AUDIO_FRAMES_PER_BUFFER)
 
 struct audio_context audio_context = {0};
@@ -54,7 +54,7 @@ int ring_buf_available(struct ring_buf *ring) {
 
 static inline int check_err(PaError err) {
     if (err != paNoError) {
-        fprintf(stderr, "portaudio audio_context.error: %s\n", Pa_GetErrorText(audio_context.err));
+        fprintf(stderr, "portaudio audio_context.error: %s\n", Pa_GetErrorText(err));
         return 1;
     }
 
@@ -94,10 +94,22 @@ void on_chunk_ready(float *samples, int count, void* userdata) {
         return;
     }
 
-    float buf[count + 1];
-    memcpy(buf + 1, samples, count);
+    int channels = audio_context.data.channels_in;
+    int frames = count / channels;
+
+
+    float buf[frames + 1];
     *(uint32_t*)buf = AUDIO_MAGIC;
-    net_client_send(cp, buf, count + 1);
+
+    for (int i = 0; i < frames; i++) {
+        float mono = 0.0f;
+        for (int c = 0; c < channels; c++) {
+            mono += samples[i * channels + c];
+        }
+        buf[i + 1] = mono / channels;
+    }
+
+    net_client_send(cp, buf, (frames + 1) * sizeof(float));
 }
 
 void *audio_receive_server_thread(void *arg) {
@@ -109,7 +121,7 @@ void *audio_receive_server_thread(void *arg) {
             if (ev.type != NET_EVENT_DATA) continue;
             if (*(uint32_t*)ev.data != AUDIO_MAGIC) continue;;
 
-            for (int i = 0; i < ctx->sp->max_clients; i++) {
+            for (uint32_t i = 0; i < ctx->sp->max_clients; i++) {
                 if (ev.client_id == i) continue;
 
                 net_server_send(ctx->sp, i, ev.data, ev.len);
@@ -117,10 +129,10 @@ void *audio_receive_server_thread(void *arg) {
         }
 
         struct timespec ts = {
-            .tv_nsec = 10000000,
+            .tv_nsec = 1000000,
         };
 
-        nanosleep(&ts, NULL);;
+        nanosleep(&ts, NULL);
     }
 
     return NULL;
@@ -135,13 +147,13 @@ void *audio_receive_client_thread(void *arg) {
             if (ev.type != NET_EVENT_DATA) continue;
             if (*(uint32_t*)ev.data != AUDIO_MAGIC) continue;
 
-            for (int i = 1; i < ev.len; i++) {
-                ring_buf_write(ctx->out, ev.data[i]);
+            for (uint64_t i = 1; i < (ev.len / sizeof(float)); i++) {
+                ring_buf_write(ctx->out, ((float*)ev.data)[i]);
             }
         }
 
         struct timespec ts = {
-            .tv_nsec = 10000000,
+            .tv_nsec = 1000000,
         };
 
         nanosleep(&ts, NULL);;
@@ -160,7 +172,7 @@ static int audio_callback(const void* input_buf, void* out_buf, unsigned long fr
     if (input_buf) {
         float* in = (float*)input_buf;
 
-        for (int i = 0; i < frames_per_buf * data->channels_in; i++) {
+        for (uint64_t i = 0; i < frames_per_buf * data->channels_in; i++) {
             //static float phase = 0.0f;
             ring_buf_write(&data->in, 5.0f * in[i]);
             //phase += 2.0f * 3.14159265359 * 440.0f / 48000.0f;
