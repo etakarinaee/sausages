@@ -16,6 +16,7 @@ enum {
     PACKET_CONNECT_ACKNOWLEDGMENT,
     PACKET_DISCONNECT,
     PACKET_DATA,
+    PACKET_VOICE,
 };
 
 static double net_time(void) {
@@ -165,6 +166,12 @@ static uint32_t peer_alloc(const struct net_server *server) {
     }
 
     return UINT32_MAX;
+}
+
+static net_voice_recv_fn voice_recv_callback = NULL;
+
+void net_set_voice_callback(const net_voice_recv_fn callback) {
+    voice_recv_callback = callback;
 }
 
 struct net_server *net_server_create(const char *ip, const uint16_t port, uint32_t n) {
@@ -325,6 +332,36 @@ uint32_t net_server_poll(struct net_server *server, struct net_event *event) {
         return 1;
     }
 
+    if (type == PACKET_VOICE) {
+        id = peer_find(server, &from);
+
+        if (id == UINT32_MAX) {
+            return 0;
+        }
+
+        server->peers[id].last_recv = t;
+
+        uint8_t relay[HEADER + 4 + NET_PAYLOAD];
+        packet_pack(relay, PACKET_VOICE);
+        relay[5] = (uint8_t) (id);
+        relay[6] = (uint8_t) (id >> 8);
+        relay[7] = (uint8_t) (id >> 16);
+        relay[8] = (uint8_t) (id >> 24);
+
+        const uint32_t payload = (uint32_t) (n - HEADER);
+        if (payload > 0 && payload <= NET_PAYLOAD) {
+            memcpy(relay + HEADER + 4, buf + HEADER, payload);
+        }
+
+        const uint32_t total = HEADER + 4 + payload;
+        for (uint32_t i = 0; i < server->max_clients; i++) {
+            if (i != id && server->peers[i].alive) {
+                udp_send(server->fd, &server->peers[i].addr, relay, total);
+            }
+        }
+        return 0;
+    }
+
     return 0;
 }
 
@@ -476,6 +513,22 @@ uint32_t net_client_poll(struct net_client *client, struct net_event *event) {
         return 1;
     }
 
+    if (type == PACKET_VOICE) {
+        if (!client->connected || n < HEADER + 4) {
+            return 0;
+        }
+
+        const uint32_t sender = (uint32_t) buf[5] | ((uint32_t) buf[6] << 8) |
+                          ((uint32_t) buf[7] << 16) | ((uint32_t) buf[8] << 24);
+        const int payload_len = n - HEADER - 4;
+
+        if (voice_recv_callback && payload_len > 0) {
+            voice_recv_callback(sender, buf + HEADER + 4, payload_len);
+        }
+
+        return 0;
+    }
+
     return 0;
 }
 
@@ -489,6 +542,21 @@ void net_client_send(const struct net_client *client, const void *data, uint32_t
     uint8_t buf[HEADER + NET_PAYLOAD];
 
     packet_pack(buf, PACKET_DATA);
+    memcpy(buf + HEADER, data, len);
+    udp_send(client->fd, &client->server, buf, HEADER + len);
+}
+
+void net_client_send_voice(const struct net_client *client, const void *data, uint32_t len) {
+    if (!client || !client->connected) {
+        return;
+    }
+
+    if (len > NET_PAYLOAD) {
+        len = NET_PAYLOAD;
+    }
+
+    uint8_t buf[HEADER + NET_PAYLOAD];
+    packet_pack(buf, PACKET_VOICE);
     memcpy(buf + HEADER, data, len);
     udp_send(client->fd, &client->server, buf, HEADER + len);
 }

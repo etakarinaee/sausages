@@ -56,6 +56,7 @@ set(CORE_SOURCES
         src/core/local.c
         src/core/ui.c
         src/core/input.c
+        src/core/voice.c
 )
 
 # Freetype2
@@ -63,7 +64,7 @@ find_package(Freetype REQUIRED)
 
 
 set(CORE_FLAGS -g -pedantic-errors -Wall -Wextra -fsanitize=address)
-set(CORE_LIBS glad stbi GL glfw freetype luajit-5.1 m dl)
+set(CORE_LIBS glad stbi GL glfw freetype luajit-5.1 m dl opus pthread)
 
 # client
 add_executable(client ${CORE_SOURCES})

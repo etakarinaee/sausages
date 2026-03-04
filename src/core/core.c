@@ -9,9 +9,10 @@
 
 #include "archive.h"
 #include "input.h"
-#include "local.h"
 #include "lua.h"
+#include "net.h"
 #include "renderer.h"
+#include "voice.h"
 
 #ifdef SERVER
 #define ENTRY SAUSAGES_ENTRY_SERVER
@@ -66,6 +67,7 @@ int main(void) {
     // TODO: any calls to renderer in server would segfault
     renderer_init(&render_context);
     input_init(&input_context, window);
+    net_set_voice_callback(voice_receive);
 #endif
 
     L = lua_init(SAUSAGES_DATA, ENTRY);
@@ -99,6 +101,7 @@ int main(void) {
         input_update(&input_context);
 
         lua_call_update(L, delta_time);
+        voice_update();
 
         input_clear_text(&input_context);
 
@@ -124,6 +127,10 @@ int main(void) {
     lua_quit(L);
     glfwDestroyWindow(render_context.window);
     glfwTerminate();
+
+#ifndef SERVER
+    voice_quit();
+#endif
 
     return EXIT_SUCCESS;
 }

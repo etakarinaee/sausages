@@ -66,12 +66,16 @@ function game_init()
 
     client = core.client.new(ip, port)
     core.print("connecting to " .. ip .. ":" .. port)
+
+    core.voice.init()
+    core.voice.volume(1.0)
 end
 
 local tick_rate = 1.0 / 120.0
 local accumulator = 0.0
 
 function game_update(delta_time)
+    core.voice.transmit(core.key_down(key.v))
     chat.update()
 
     local msg = chat.poll_outgoing()
