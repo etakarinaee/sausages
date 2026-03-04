@@ -3,17 +3,17 @@
 
 Debian:
 ```bash
-sudo apt install libfreetype6-dev libglfw3-dev portaudio19-dev luaji
+sudo apt install libfreetype6-dev libglfw3-dev libopus-dev luajit
 ```
 
 Arch:
 ```bash
-sudo pacman -S freetype2 glfw portaudio luajit
+sudo pacman -S freetype2 glfw opus luajit
 ```
 
 Fedora:
 ```bash
-sudo dnf install freetype-devel glfw-devel portaudio-devel luajit-devel
+sudo dnf install freetype-devel glfw-devel opus-devel luajit-devel
 ```
 
 # Build 
