@@ -420,6 +420,19 @@ static int l_server_broadcast(lua_State *L) {
 }
 
 static int l_server_broadcast_voice_chat(lua_State *L) {
+    struct net_server **sp = luaL_checkudata(L, 1, SERVER_MT);
+    const uint32_t client_id = luaL_checkint(L, 2);
+
+    size_t len;
+    const char *data = luaL_checklstring(L, 3, &len);
+
+    if (*(uint32_t*)data != AUDIO_MAGIC) return 0;
+
+    for (int i = 0; i < (*sp)->max_clients; i++) {
+        if (client_id == i) continue;
+
+        net_server_send(*sp, i, data, len);
+    }
 
     return 0;
 }
@@ -475,6 +488,25 @@ static int l_client_enable_voice_chat(lua_State *L) {
     return 0;
 }
 
+static int l_client_write_audio(lua_State *L) {
+    struct net_client **cp = luaL_checkudata(L, 1, CLIENT_MT);
+    (void)cp;
+
+    size_t len;
+    const char *data = luaL_checklstring(L, 2, &len);
+
+    if (*(uint32_t*)data != AUDIO_MAGIC) return 0;
+
+    int count = (int)(len / sizeof(float)) - 1; // for audio magic
+    float* samples = (float*)data + 1;
+
+    for (int i = 0; i < count; i++) {
+        ring_buf_write(&audio_context.data.out, samples[i]);
+    }
+
+    return 0;
+}
+
 static int l_client_poll(lua_State *L) {
     struct net_client **cp = luaL_checkudata(L, 1, CLIENT_MT);
     struct net_event ev;
@@ -522,6 +554,7 @@ static const luaL_Reg client_methods[] = {
     {"connected", l_client_connected},
     {"close", l_client_close},
     {"enable_voice_chat", l_client_enable_voice_chat},
+    {"write_audio", l_client_write_audio},
     {"__gc", l_client_close},
     {NULL, NULL}
 };

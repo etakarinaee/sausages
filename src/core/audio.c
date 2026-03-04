@@ -62,29 +62,21 @@ int ring_buf_available(struct ring_buf *ring) {
 void *audio_send_thread(void *arg) {
     struct audio_send_ctx *ctx = (struct audio_send_ctx*)arg;
     int chunk_size = ctx->frames_per_chunk * ctx->channels;
-
     float *chunk = malloc(chunk_size * sizeof(float));
 
-    /* interval in ns (frames / sample_rate) */
-    long interval_ns = (long)((ctx->frames_per_chunk / SAMPLE_RATE) * 1e9);
-
-    struct timespec next;
-    clock_gettime(CLOCK_MONOTONIC, &next);
-
     while (atomic_load_explicit(&ctx->running, memory_order_relaxed)) {
-        clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
-
-        next.tv_nsec += interval_ns;
-        if (next.tv_nsec >= 1000000000L) {
-            next.tv_nsec -= 1000000000L;
-            next.tv_sec++;
-        }
-
         if (ring_buf_available(ctx->in) >= chunk_size) {
             for (int i = 0; i < chunk_size; i++) {
                 chunk[i] = ring_buf_read(ctx->in);
             }
             ctx->on_chunk_ready(chunk, chunk_size, ctx->userdata);
+        }
+        else {
+            struct timespec ts = {
+                .tv_nsec = 10000000,
+            };
+
+            nanosleep(&ts, NULL);;
         }
     }
 
@@ -96,14 +88,14 @@ void on_chunk_ready(float *samples, int count, void* userdata) {
     /* increase complexity later */
     struct net_client *cp = userdata;
     if (!cp) {
-        fprintf(stderr, "audio: voice chat client is NULL did you call client:enable_voice_chat()?\n");
+        fprintf(stderr, "audio: voice chat client is NULL, did you call client:enable_voice_chat()?\n");
         return;
     }
 
     float buf[count + 1];
     memcpy(buf + 1, samples, count);
-    *(uint32_t*)(&buf[0]) = AUDIO_MAGIC;
-    net_client_send(cp, samples, count);
+    *(uint32_t*)buf = AUDIO_MAGIC;
+    net_client_send(cp, buf, count + 1);
 }
 
 static int audio_callback(const void* input_buf, void* out_buf, unsigned long frames_per_buf, 

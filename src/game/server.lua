@@ -25,6 +25,7 @@ function game_update(dt)
             server:broadcast(ev.id .. ":left:")
             clients[ev.id] = nil
         elseif ev.type == core.net_event.data then
+            server:broadcast_voice_chat(ev.id, ev.data)
             local msg_type, payload = ev.data:match("^(%w+):(.+)$")
 
             if msg_type == "nickname" then
