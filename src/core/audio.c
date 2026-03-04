@@ -111,9 +111,9 @@ static int audio_callback(const void* input_buf, void* out_buf, unsigned long fr
         float* in = (float*)input_buf;
 
         for (int i = 0; i < frames_per_buf * data->channels_in; i++) {
-            static float phase = 0.0f;
-            ring_buf_write(&data->in, 0.1f * sin(phase));
-            phase += 2.0f * 3.14159265359 * 440.0f / 48000.0f;
+            //static float phase = 0.0f;
+            ring_buf_write(&data->in, 5.0f * in[i]);
+            //phase += 2.0f * 3.14159265359 * 440.0f / 48000.0f;
         }
     }
 
