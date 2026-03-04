@@ -7,6 +7,8 @@
 #include <pthread.h>
 #include <stdbool.h> 
 
+#include "net.h"
+
 #define AUDIO_FRAMES_PER_BUFFER 512
 
     /* for max 2 channels 2x */
@@ -40,6 +42,19 @@ struct audio_send_ctx {
     int channels;
 };
 
+struct audio_receive_server_ctx {
+    struct net_server *sp;
+
+    _Atomic bool running;
+};
+
+struct audio_receive_client_ctx {
+    struct net_client *cp;
+    struct ring_buf *out;
+
+    _Atomic bool running;
+};
+
 struct audio_data {  
     int channels_in;
     int channels_out;
@@ -65,7 +80,12 @@ struct audio_context {
 
     pthread_t send_thread;
     struct audio_send_ctx send_ctx;
-    _Atomic bool send_thread_running;
+
+    pthread_t receive_server_thread;
+    struct audio_receive_server_ctx receive_server_ctx;
+
+    pthread_t receive_client_thread;
+    struct audio_receive_client_ctx receive_client_ctx;
 
     on_chunk_ready_fn on_chunk_ready;
     void *on_chunk_ready_userdata;
@@ -81,7 +101,9 @@ float ring_buf_read(struct ring_buf *ring);
 int ring_buf_available(struct ring_buf *ring);
 
 void *audio_send_thread(void *arg);
- void on_chunk_ready(float *samples, int count, void* userdata);
+void *audio_receive_server_thread(void *arg);
+void *audio_receive_client_thread(void *arg);
+void on_chunk_ready(float *samples, int count, void* userdata);
 
 #endif // AUDIO_H
 

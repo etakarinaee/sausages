@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -236,42 +237,6 @@ static int l_check_point_rect(lua_State *L) {
 }
 
 ////////////////
-/* audio */
-////////////////
-
-static int l_get_audio_buffer(lua_State *L) {
-    lua_newtable(L);
-
-    for (int i = 0; i < AUDIO_BUFFER_COUNT; i++) {
-        lua_pushinteger(L, i); // index
-        lua_pushnumber(L, ring_buf_read(&audio_context.data.in));
-        lua_settable(L, -3);
-    }
-
-    return 1;
-} 
-
-static int l_write_audio_buffer(lua_State *L) {
-
-    luaL_checktype(L, 1, LUA_TTABLE);
-
-    for (int i = 0; i < AUDIO_BUFFER_COUNT; i++) {
-        lua_rawgeti(L, 1, i + 1);
-
-        if (!lua_isnumber(L, -1)) {
-            ring_buf_write(&audio_context.data.out, 0.0f);  
-        } 
-        else {
-            ring_buf_write(&audio_context.data.out,(float)lua_tonumber(L, -1));  
-        }
-
-        lua_pop(L, 1);
-    }
-
-    return 0;
-}
-
-////////////////
 /* input */
 ////////////////
 
@@ -419,20 +384,13 @@ static int l_server_broadcast(lua_State *L) {
     return 0;
 }
 
-static int l_server_broadcast_voice_chat(lua_State *L) {
+static int l_server_enable_voice_chat(lua_State *L) {
     struct net_server **sp = luaL_checkudata(L, 1, SERVER_MT);
-    const uint32_t client_id = luaL_checkint(L, 2);
 
-    size_t len;
-    const char *data = luaL_checklstring(L, 3, &len);
+    audio_context.receive_server_ctx.sp = *sp;
 
-    if (*(uint32_t*)data != AUDIO_MAGIC) return 0;
-
-    for (int i = 0; i < (*sp)->max_clients; i++) {
-        if (client_id == i) continue;
-
-        net_server_send(*sp, i, data, len);
-    }
+    atomic_store(&audio_context.receive_server_ctx.running, true);
+    pthread_create(&audio_context.receive_server_thread, NULL, audio_receive_server_thread, &audio_context.receive_server_ctx);
 
     return 0;
 }
@@ -442,7 +400,7 @@ static const luaL_Reg server_methods[] = {
     {"send", l_server_send},
     {"broadcast", l_server_broadcast},
     {"close", l_server_close},
-    {"broadcast_voice_chat", l_server_broadcast_voice_chat},
+    {"enable_voice_chat", l_server_enable_voice_chat},
     {"__gc", l_server_close},
     {NULL,NULL},
 };
@@ -481,33 +439,14 @@ static int l_client_enable_voice_chat(lua_State *L) {
         .userdata = audio_context.on_chunk_ready_userdata,
     };
 
-    atomic_store(&audio_context.send_thread_running, true);
     atomic_store(&audio_context.send_ctx.running, true);
     pthread_create(&audio_context.send_thread, NULL, audio_send_thread, &audio_context.send_ctx);
 
-    return 0;
-}
+    audio_context.receive_client_ctx.cp = *cp;
+    audio_context.receive_client_ctx.out = &audio_context.data.out;
 
-static int l_client_write_audio(lua_State *L) {
-    struct net_client **cp = luaL_checkudata(L, 1, CLIENT_MT);
-    (void)cp;
-
-    size_t len;
-    const char *data = luaL_checklstring(L, 2, &len);
-
-    if (*(uint32_t*)data != AUDIO_MAGIC) return 0;
-
-    int count = (int)(len / sizeof(float)) - 1; // for audio magic
-    float* samples = (float*)data + 1;
-
-    int avialable = AUDIO_BUFFER_RING_COUNT - ring_buf_available(&audio_context.data.out);
-    if (avialable < count) {
-        return 0;
-    }
-
-    for (int i = 0; i < count; i++) {
-        ring_buf_write(&audio_context.data.out, samples[i]);
-    }
+    atomic_store(&audio_context.receive_client_ctx.running, true);
+    pthread_create(&audio_context.receive_client_thread, NULL, audio_receive_client_thread, &audio_context.receive_client_ctx);
 
     return 0;
 }
@@ -559,7 +498,6 @@ static const luaL_Reg client_methods[] = {
     {"connected", l_client_connected},
     {"close", l_client_close},
     {"enable_voice_chat", l_client_enable_voice_chat},
-    {"write_audio", l_client_write_audio},
     {"__gc", l_client_close},
     {NULL, NULL}
 };
@@ -625,10 +563,6 @@ static const luaL_Reg api[] = {
     /* collison */
     {"check_point_circle", l_check_point_circle},
     {"check_point_rect", l_check_point_rect},
-
-    /* audio */
-    {"get_audio_buffer", l_get_audio_buffer},
-    {"write_audio_buffer", l_write_audio_buffer},
 
     /* localization */
     {"local_load", l_local_load},

@@ -75,7 +75,6 @@ function game_update(delta_time)
             core.print("disconnected")
             local_id = nil
         elseif ev.type == core.net_event.data then
-            client:write_audio(ev.data)
             local id, msg_type, a, b = deserialize_message(ev.data)
 
             if id and id ~= local_id then

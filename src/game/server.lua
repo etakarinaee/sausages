@@ -5,6 +5,8 @@ local clients = {}  -- { [id] = { nickname = "name" } }
 function game_init()
     server = core.server.new(os.getenv("SAUSAGES_IP") or "127.0.0.1", 7777, 32)
     core.print("server listening on 7777")
+
+    server:enable_voice_chat()
 end
 
 function game_update(dt)
@@ -25,7 +27,6 @@ function game_update(dt)
             server:broadcast(ev.id .. ":left:")
             clients[ev.id] = nil
         elseif ev.type == core.net_event.data then
-            server:broadcast_voice_chat(ev.id, ev.data)
             local msg_type, payload = ev.data:match("^(%w+):(.+)$")
 
             if msg_type == "nickname" then

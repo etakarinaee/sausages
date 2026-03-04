@@ -46,6 +46,12 @@ float ring_buf_read(struct ring_buf *ring) {
     return val;
 }
 
+int ring_buf_available(struct ring_buf *ring) {
+    int wp = atomic_load_explicit(&ring->write_pos, memory_order_acquire);
+    int rp = atomic_load_explicit(&ring->read_pos, memory_order_relaxed);
+    return wp - rp;
+}
+
 static inline int check_err(PaError err) {
     if (err != paNoError) {
         fprintf(stderr, "portaudio audio_context.error: %s\n", Pa_GetErrorText(audio_context.err));
@@ -53,12 +59,6 @@ static inline int check_err(PaError err) {
     }
 
     return 0;
-}
-
-int ring_buf_available(struct ring_buf *ring) {
-    int wp = atomic_load_explicit(&ring->write_pos, memory_order_acquire);
-    int rp = atomic_load_explicit(&ring->read_pos, memory_order_relaxed);
-    return wp - rp;
 }
 
 void *audio_send_thread(void *arg) {
@@ -98,6 +98,56 @@ void on_chunk_ready(float *samples, int count, void* userdata) {
     memcpy(buf + 1, samples, count);
     *(uint32_t*)buf = AUDIO_MAGIC;
     net_client_send(cp, buf, count + 1);
+}
+
+void *audio_receive_server_thread(void *arg) {
+    struct audio_receive_server_ctx *ctx = arg;
+
+    while (atomic_load_explicit(&ctx->running, memory_order_relaxed)) {
+        struct net_event ev;
+        if (net_server_poll(ctx->sp, &ev)) {
+            if (ev.type != NET_EVENT_DATA) continue;
+            if (*(uint32_t*)ev.data != AUDIO_MAGIC) continue;;
+
+            for (int i = 0; i < ctx->sp->max_clients; i++) {
+                if (ev.client_id == i) continue;
+
+                net_server_send(ctx->sp, i, ev.data, ev.len);
+            }
+        }
+
+        struct timespec ts = {
+            .tv_nsec = 10000000,
+        };
+
+        nanosleep(&ts, NULL);;
+    }
+
+    return NULL;
+}
+
+void *audio_receive_client_thread(void *arg) {
+    struct audio_receive_client_ctx *ctx = arg;
+
+    while (atomic_load_explicit(&ctx->running, memory_order_relaxed)) { 
+        struct net_event ev;
+        if (net_client_poll(ctx->cp, &ev)) {
+            if (ev.type != NET_EVENT_DATA) continue;
+            if (*(uint32_t*)ev.data != AUDIO_MAGIC) continue;
+
+            for (int i = 1; i < ev.len; i++) {
+                ring_buf_write(ctx->out, ev.data[i]);
+            }
+        }
+
+        struct timespec ts = {
+            .tv_nsec = 10000000,
+        };
+
+        nanosleep(&ts, NULL);;
+    }
+
+    return NULL;
 }
 
 static int audio_callback(const void* input_buf, void* out_buf, unsigned long frames_per_buf, 
@@ -238,6 +288,12 @@ int audio_init() {
 void audio_deinit() {
     atomic_store(&audio_context.send_ctx.running, false);
     pthread_join(audio_context.send_thread, NULL);
+
+    atomic_store(&audio_context.receive_server_ctx.running, false);
+    pthread_join(audio_context.receive_server_thread, NULL);
+
+    atomic_store(&audio_context.receive_client_ctx.running, false);
+    pthread_join(audio_context.receive_client_thread, NULL);
 
     audio_context.err = Pa_StopStream(audio_context.stream);
     if (check_err(audio_context.err)) {
