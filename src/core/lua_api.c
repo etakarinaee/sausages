@@ -500,6 +500,11 @@ static int l_client_write_audio(lua_State *L) {
     int count = (int)(len / sizeof(float)) - 1; // for audio magic
     float* samples = (float*)data + 1;
 
+    int avialable = AUDIO_BUFFER_RING_COUNT - ring_buf_available(&audio_context.data.out);
+    if (avialable < count) {
+        return 0;
+    }
+
     for (int i = 0; i < count; i++) {
         ring_buf_write(&audio_context.data.out, samples[i]);
     }

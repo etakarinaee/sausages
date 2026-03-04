@@ -53,6 +53,8 @@ struct audio_data {
     /* only gets read in audio callback 
        and only written in lua api */
     struct ring_buf out; /* output from other clients */
+
+    _Atomic bool playback_ready;
 };
 
 struct audio_context {

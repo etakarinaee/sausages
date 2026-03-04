@@ -16,6 +16,8 @@
 
 /* idk maybe not hardcode */
 #define SAMPLE_RATE 48000.0
+#define PLAYBACK_PREBUFFER_CHUNKS 4 
+#define PLAYBACK_PREBUFFER_SAMPLES (PLAYBACK_PREBUFFER_CHUNKS * AUDIO_FRAMES_PER_BUFFER)
 
 struct audio_context audio_context = {0};
 
@@ -117,6 +119,34 @@ static int audio_callback(const void* input_buf, void* out_buf, unsigned long fr
 
     /* Output */
     for (unsigned long i = 0; i < frames_per_buf; i++) {
+        if (!atomic_load_explicit(&data->playback_ready, memory_order_relaxed)) {
+            if (ring_buf_available(&data->out) >= PLAYBACK_PREBUFFER_SAMPLES) {
+                atomic_store_explicit(&data->playback_ready, true, memory_order_relaxed);
+            } 
+            else {
+                if (data->channels_out == 1) {
+                    out[i] = 0.0f;
+                }
+                else {
+                    out[i * 2] = 0.0f;
+                    out[i * 2 + 1] = 0.0f;
+                }
+                continue;
+            }
+        }
+
+        if (ring_buf_available(&data->out) == 0) {
+            atomic_store_explicit(&data->playback_ready, false, memory_order_relaxed);
+            if (data->channels_out == 1) {
+                out[i] = 0.0f;
+            }
+            else {
+                out[i * 2] = 0.0f;
+                out[i * 2 + 1] = 0.0f;
+            }
+            continue;
+        }
+
         float sample = ring_buf_read(&data->out);
 
         if (data->channels_out == 1) {
