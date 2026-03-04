@@ -15,6 +15,7 @@ enum {
     NET_EVENT_CONNECT,
     NET_EVENT_DISCONNECT,
     NET_EVENT_DATA,
+    NET_EVENT_VOICE,
 };
 
 struct net_addr {
@@ -81,5 +82,11 @@ void net_client_destroy(struct net_client *client);
 uint32_t net_client_poll(struct net_client *client, struct net_event *event);
 
 void net_client_send(const struct net_client *client, const void *data, uint32_t len);
+
+typedef void (*net_voice_recv_fn)(uint32_t peer_id, const uint8_t *data, int len);
+
+void net_set_voice_callback(net_voice_recv_fn callback);
+
+void net_client_send_voice(const struct net_client *client, const void *data, uint32_t len);
 
 #endif /* NET_H */

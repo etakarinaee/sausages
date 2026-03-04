@@ -56,6 +56,7 @@ set(CORE_SOURCES
         src/core/local.c
         src/core/ui.c
         src/core/input.c
+        src/core/voice.c
 )
 
 # Freetype2

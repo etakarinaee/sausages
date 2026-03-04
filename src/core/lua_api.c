@@ -14,6 +14,7 @@
 #include "ui.h"
 #include "collision.h"
 #include "input.h"
+#include "voice.h"
 
 // metatables
 #define SERVER_MT "net_server"
@@ -460,6 +461,8 @@ static int l_client_new(lua_State *L) {
     struct net_client **cp = lua_newuserdata(L, sizeof *cp);
     *cp = c;
 
+    voice_set_client(c);
+
     luaL_getmetatable(L, CLIENT_MT);
     lua_setmetatable(L, -2);
 
@@ -492,6 +495,7 @@ static int l_client_close(lua_State *L) {
         *cp = NULL;
     }
 
+    voice_set_client(NULL);
     return 0;
 }
 
@@ -553,6 +557,32 @@ static int l_local_current_locale(lua_State *L) {
     lua_pushstring(L, locale);
 
     return 1;
+}
+
+////////////////
+/* voice chat */
+////////////////
+
+static int l_voice_init(lua_State *L) {
+    (void) L;
+    if (voice_init() != 0)
+        return luaL_error(L, "core.voice.init: failed to initialize");
+    return 0;
+}
+
+static int l_voice_mute(lua_State *L) {
+    voice_set_muted(lua_toboolean(L, 1));
+    return 0;
+}
+
+static int l_voice_volume(lua_State *L) {
+    voice_set_volume((float) luaL_checknumber(L, 1));
+    return 0;
+}
+
+static int l_voice_transmit(lua_State *L) {
+    voice_set_ptt_active(lua_toboolean(L, 1));
+    return 0;
 }
 
 static const luaL_Reg api[] = {
@@ -793,6 +823,18 @@ void lua_api_init(lua_State *L) {
     lua_pushinteger(L, ANCHOR_CENTER);
     lua_setfield(L, -2, "center");
     lua_setfield(L, -2, "anchor");
+
+    /* core.voice */
+    lua_newtable(L);
+    lua_pushcfunction(L, l_voice_init);
+    lua_setfield(L, -2, "init");
+    lua_pushcfunction(L, l_voice_mute);
+    lua_setfield(L, -2, "mute");
+    lua_pushcfunction(L, l_voice_volume);
+    lua_setfield(L, -2, "volume");
+    lua_pushcfunction(L, l_voice_transmit);
+    lua_setfield(L, -2, "transmit");
+    lua_setfield(L, -2, "voice");
 
     lua_setglobal(L, "core");
 
