@@ -137,6 +137,11 @@ int renderer_init(struct render_context *r) {
         return 1;
     }
 
+    if (program_init("circle.vert", "circle.frag", &r->circle_program)) {
+        fprintf(stderr, "failed to init shaders!\n");
+        return 1;
+    }
+
     if (program_init("texture.vert", "texture.frag", &r->tex_program)) {
         fprintf(stderr, "failed to init shaders!\n");
         return 1;
@@ -225,6 +230,18 @@ void renderer_push_rect(struct render_context *r, struct vec2 pos, struct vec2 s
         .pos = anchor_pos,
         .scale = scale,
         .rotation = rotation,
+        .data.color = c,
+    };
+
+    renderer_push_quad(r, data);
+}
+
+void renderer_push_circle(struct render_context *r, struct vec2 pos, float radius, struct color3 c) {
+    struct quad_data data = (struct quad_data){
+        .type = QUAD_TYPE_CIRCLE,
+        .pos = pos,
+        .scale = (struct vec2){radius, radius},
+        .rotation = 0.0f,
         .data.color = c,
     };
 
@@ -364,6 +381,8 @@ void renderer_draw(struct render_context *r) {
         switch (data->type) {
             case QUAD_TYPE_RECT:
                 goto render_rect;
+            case QUAD_TYPE_CIRCLE:
+                goto render_circle;
             case QUAD_TYPE_TEXTURE:
                 if (data->data.texture.tex_id == CORE_RENDERER_QUAD_NO_TEXTURE) {
                     goto render_rect;
@@ -376,6 +395,7 @@ void renderer_draw(struct render_context *r) {
         }
 
         GLint sampler_loc;
+        GLint uniform_color_loc;
 
         /* RECT */
         render_rect:
@@ -383,8 +403,22 @@ void renderer_draw(struct render_context *r) {
         uniform_matrix_model_loc = glGetUniformLocation(r->quad_program, "u_model");
         uniform_matrix_cam_loc = glGetUniformLocation(r->quad_program, "u_proj");
 
-        const GLint uniform_color_loc = glGetUniformLocation(r->quad_program, "u_color");
+        uniform_color_loc = glGetUniformLocation(r->quad_program, "u_color");
         glUniform3f(uniform_color_loc, data->data.color.r, data->data.color.g, data->data.color.b);
+        goto render;
+
+        /* CIRCLE */
+        render_circle:
+        glUseProgram(r->circle_program);
+        uniform_matrix_model_loc = glGetUniformLocation(r->circle_program, "u_model");
+        uniform_matrix_cam_loc = glGetUniformLocation(r->circle_program, "u_proj");
+
+        uniform_color_loc = glGetUniformLocation(r->circle_program, "u_color");
+        glUniform3f(uniform_color_loc, data->data.color.r, data->data.color.g, data->data.color.b);
+  
+        GLint uniform_radius_loc = glGetUniformLocation(r->circle_program, "u_radius");
+        glUniform1f(uniform_radius_loc, data->scale.x);
+
         goto render;
 
         /* TEXTURE */

@@ -150,6 +150,16 @@ static int l_push_rect_ex(lua_State *L) {
     return 0;
 }
 
+static int l_push_circle(lua_State *L) {
+    const struct vec2 pos = check_vec2(L, 1);
+    const float radius = luaL_checknumber(L, 2);
+    const struct color3 color = check_color3(L, 3);
+
+    renderer_push_circle(&render_context, pos, radius, color);
+
+    return 0;
+}
+
 static int l_push_texture(lua_State *L) {
     const struct vec2 pos = check_vec2(L, 1);
     const struct vec2 scale = check_vec2(L, 2);
@@ -622,6 +632,7 @@ static const luaL_Reg api[] = {
     /* Render */
     {"push_rect", l_push_rect},
     {"push_rect_ex", l_push_rect_ex},
+    {"push_circle", l_push_circle},
     {"push_texture", l_push_texture},
     {"push_texture_ex", l_push_texture_ex},
     {"push_text", l_push_text},

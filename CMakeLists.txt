@@ -21,6 +21,8 @@ set(ARCHIVE_FILE ${CMAKE_BINARY_DIR}/sausages.arc)
 set(ARC_INPUTS
         ${CMAKE_SOURCE_DIR}/src/core/shaders/quad.vert
         ${CMAKE_SOURCE_DIR}/src/core/shaders/quad.frag
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/circle.vert
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/circle.frag
         ${CMAKE_SOURCE_DIR}/src/core/shaders/texture.vert
         ${CMAKE_SOURCE_DIR}/src/core/shaders/texture.frag
         ${CMAKE_SOURCE_DIR}/src/core/shaders/text.vert

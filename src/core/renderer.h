@@ -25,6 +25,7 @@ typedef int font_id;
 
 enum {
     QUAD_TYPE_RECT,
+    QUAD_TYPE_CIRCLE,
     QUAD_TYPE_TEXTURE,
     QUAD_TYPE_TEXT,
 };
@@ -96,6 +97,7 @@ struct render_context {
     GLuint ebo;
 
     GLuint quad_program;
+    GLuint circle_program;
     GLuint tex_program;
     GLuint text_program;
 
@@ -111,6 +113,7 @@ void renderer_deinit(const struct render_context *r);
 
 void renderer_push_quad(struct render_context *r, struct quad_data data);
 void renderer_push_rect(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, struct color3 c, int anchor);
+void renderer_push_circle(struct render_context *r, struct vec2 pos, float radius, struct color3 c);
 void renderer_push_texture(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, texture_id texture, int anchor);
 void renderer_push_text(struct render_context *r, struct vec2 pos, float scale, struct color3 text_color, font_id font, const char* text, int anchor);
 
