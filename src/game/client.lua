@@ -64,11 +64,11 @@ function game_init()
     local ip = os.getenv("SAUSAGES_IP") or "127.0.0.1"
     local port = tonumber(os.getenv("SAUSAGES_PORT")) or 7777
 
-    client = core.client.new(ip, port)
-    core.print("connecting to " .. ip .. ":" .. port)
-
     core.voice.init()
     core.voice.volume(1.0)
+
+    client = core.client.new(ip, port)
+    core.print("connecting to " .. ip .. ":" .. port)
 end
 
 local tick_rate = 1.0 / 120.0
