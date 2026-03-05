@@ -116,8 +116,12 @@ function game_update(delta_time)
                 elseif msg_type == "join" then
                     chat.send(a .. " joined the game", {1, 1, 0})
                 elseif msg_type == "chat" then
-                    local name = players[id] and players[id].nickname or ("Player" .. id)
-                    chat.add(name, a)
+                    if id == 65535 then
+                        chat.send(a, {1, 1, 0})
+                    else
+                        local name = players[id] and players[id].nickname or ("Player" .. id)
+                        chat.add(name, a)
+                    end
                 end
             end
         end

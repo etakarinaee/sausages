@@ -1,12 +1,20 @@
 local server = nil
 local clients = {}
 
+local server_id = 65535
+
 function game_init()
     server = core.server.new(os.getenv("SAUSAGES_IP") or "127.0.0.1", 7777, 32)
     core.print("server listening on 7777")
 end
 
 function game_update(dt)
+    local line = core.read_stdin()
+    if line and #line > 0 then
+        core.print(line)
+        server:broadcast(server_id .. ":chat:" .. line)
+    end
+
     local ev = server:poll()
     while ev do
         if ev.type == core.net_event.connect then

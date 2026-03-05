@@ -19,7 +19,7 @@ sudo dnf install freetype-devel glfw-devel opus-devel luajit-devel
 # Build 
 ```bash
 git clone https://github.com/etakarinaee/sausages.git
-cd sausage
+cd sausages
 mkdir build
 cd build
 cmake ..

@@ -1,5 +1,7 @@
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <luajit-2.1/lauxlib.h>
 #include <luajit-2.1/lua.h>
@@ -19,6 +21,34 @@
 // metatables
 #define SERVER_MT "net_server"
 #define CLIENT_MT "net_client"
+
+////////////////
+/* etc */
+////////////////
+
+static int l_read_stdin(lua_State *L) {
+    const int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+
+    char buf[1024];
+    ssize_t n = read(STDIN_FILENO, buf, sizeof(buf) - 1);
+
+    fcntl(STDIN_FILENO, F_SETFL, flags);
+
+    if (n <= 0) {
+        return 0;
+    }
+
+    while (n > 0 && (buf[n - 1] == '\n' || buf[n - 1] == '\r')) {
+        n--;
+    }
+    if (n == 0) {
+        return 0;
+    }
+
+    lua_pushlstring(L, buf, (size_t) n);
+    return 1;
+}
 
 static struct vec2 check_vec2(lua_State *L, const int idx) {
     struct vec2 v;
@@ -623,6 +653,8 @@ static const luaL_Reg api[] = {
     {"mouse_just_up", l_mouse_just_up},
     {"mouse_position", l_mouse_position},
     {"get_text_input", l_get_text_input},
+
+    {"read_stdin", l_read_stdin},
     {NULL, NULL},
 };
 
