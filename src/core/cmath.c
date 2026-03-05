@@ -20,6 +20,14 @@ float math_vec2_length(struct vec2 v) {
     return sqrtf(v.x * v.x + v.y * v.y);
 }
 
+struct vec2 math_vec2_norm(struct vec2 v) {
+    float len = math_vec2_length(v);
+    return (struct vec2){
+        .x = v.x / len,
+        .y = v.y / len,
+    };
+}
+
 float math_vec2_distance(struct vec2 a, struct vec2 b) {
     struct vec2 delta = math_vec2_subtract(a, b);
     return math_vec2_length(delta);
