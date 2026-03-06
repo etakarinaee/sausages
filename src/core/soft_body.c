@@ -227,7 +227,7 @@ void ph_soft_body_update(struct ph_soft_body *b, float dt) {
         vertices[i * 2 + 1] = b->points[i].pos.y;
     }
 
-    renderer_update_mesh(&b->mesh, vertices, b->points_count, (struct color3){1.0f, 0.0f, 1.0f});
+    renderer_update_mesh(&b->mesh, vertices, b->points_count, (struct color3){1.0f, 0.0f, 0.0f});
 }
 
 void ph_soft_body_apply_velocity(struct ph_soft_body *b, struct vec2 vel) {
@@ -237,14 +237,6 @@ void ph_soft_body_apply_velocity(struct ph_soft_body *b, struct vec2 vel) {
 }
 
 void ph_soft_body_draw(struct ph_soft_body *b) {
-
-    /*
-    for (int i = 0; i < b->points_count; i++) {
-        renderer_push_circle(&render_context, b->points[i].pos, b->point_radius,
-                             (struct color3){1.0f, 0.0f, 0.0f});
-    }
-    */
-    
     renderer_push_mesh(&render_context, b->mesh, (struct vec2){0, 0}, (struct vec2){1.0f, 1.0f});
 }
 
