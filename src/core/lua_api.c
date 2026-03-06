@@ -211,6 +211,59 @@ static int l_push_text_ex(lua_State *L) {
     return 0;
 }
 
+static int l_push_mesh(lua_State *L) {
+    const int handle = luaL_checkinteger(L, 1);
+    const struct vec2 pos = check_vec2(L, 2);
+    const struct vec2 scale = check_vec2(L, 3);
+
+    renderer_push_mesh(&render_context, game_context.meshs[handle], pos, scale);
+    return 0;
+}
+
+static int l_create_mesh(lua_State *L) {
+    const int vertex_count = luaL_checkinteger(L, 1);
+    luaL_checktype(L, 2, LUA_TTABLE);
+
+    float vertices[vertex_count];
+
+    for (int i = 0; i < vertex_count; i++) {
+        lua_rawgeti(L, 2, 1);
+        vertices[i] = (float)luaL_checknumber(L, -1);
+        lua_pop(L, 1);
+    }
+
+    const struct color3 color = check_color3(L, 3);
+    /*
+         TODO: implement ebo generation
+        int handle = game_context.meshs_index;
+        game_context.meshs[game_context.meshs_index++] =
+            renderer_create_mesh(vertices, vertex_count, color);
+        lua_pushinteger(L, handle);
+        */
+    return 1;
+}
+
+static int l_update_mesh(lua_State *L) {
+    const int handle = luaL_checkinteger(L, 1);
+    const int vertex_count = luaL_checkinteger(L, 2);
+    luaL_checktype(L, 3, LUA_TTABLE);
+
+    float vertices[vertex_count];
+
+    for (int i = 0; i < vertex_count; i++) {
+        lua_rawgeti(L, 3, 1);
+        vertices[i] = (float)luaL_checknumber(L, -1);
+        lua_pop(L, 1);
+    }
+
+    const struct color3 color = check_color3(L, 4);
+
+    renderer_update_mesh(&game_context.meshs[handle], vertices, vertex_count,
+                         color);
+
+    return 0;
+}
+
 static int l_load_texture(lua_State *L) {
     const texture_id tex = renderer_load_texture(luaL_checkstring(L, 1));
     lua_pushinteger(L, tex);

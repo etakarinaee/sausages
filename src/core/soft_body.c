@@ -102,6 +102,32 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
         }
     }
 
+    float vertices[b.points_count * 2];
+    int indices_count = (width - 1) * (height - 1) * 6;
+    uint32_t indices[indices_count];
+    int indices_idx = 0;
+
+    for (int i = 0; i < b.points_count; i++) {
+
+        vertices[i * 2] = b.points[i].pos.x;
+        vertices[i * 2 + 1] = b.points[i].pos.y;
+
+        int x = i % width;
+
+        if (x < width - 1 && i + stride < b.points_count) {
+
+            // triangle 1
+            indices[indices_idx++] = i;
+            indices[indices_idx++] = i + 1;
+            indices[indices_idx++] = i + stride;
+
+            // triangle 2
+            indices[indices_idx++] = i + 1;
+            indices[indices_idx++] = i + stride + 1;
+            indices[indices_idx++] = i + stride;
+        }
+    }     
+    b.mesh = renderer_create_mesh(vertices, b.points_count, indices, indices_count, (struct color3){1.0f, 0.0f, 0.0f});
     return b;
 }
 
@@ -192,6 +218,16 @@ void ph_soft_body_update(struct ph_soft_body *b, float dt) {
     for (int s = 0; s < substeps; s++) {
         ph_soft_body_update_substep(b, sub_dt);
     }
+
+    
+    float vertices[b->points_count * 2];
+
+    for (int i = 0; i < b->points_count; i++) {
+        vertices[i * 2] = b->points[i].pos.x;
+        vertices[i * 2 + 1] = b->points[i].pos.y;
+    }
+
+    renderer_update_mesh(&b->mesh, vertices, b->points_count, (struct color3){1.0f, 0.0f, 1.0f});
 }
 
 void ph_soft_body_apply_velocity(struct ph_soft_body *b, struct vec2 vel) {
@@ -201,10 +237,15 @@ void ph_soft_body_apply_velocity(struct ph_soft_body *b, struct vec2 vel) {
 }
 
 void ph_soft_body_draw(struct ph_soft_body *b) {
+
+    /*
     for (int i = 0; i < b->points_count; i++) {
         renderer_push_circle(&render_context, b->points[i].pos, b->point_radius,
                              (struct color3){1.0f, 0.0f, 0.0f});
     }
+    */
+    
+    renderer_push_mesh(&render_context, b->mesh, (struct vec2){0, 0}, (struct vec2){1.0f, 1.0f});
 }
 
 void ph_soft_body_destroy(struct ph_soft_body *b) {

@@ -138,7 +138,7 @@ function game_update(delta_time)
         return
     end
 
-    ccumulator = accumulator + delta_time
+    accumulator = accumulator + delta_time
     if accumulator > 0.2 then accumulator = 0.2 end
 
     while accumulator >= tick_rate do
@@ -188,7 +188,7 @@ function game_update(delta_time)
     core.push_circle({-300, 300}, 100, {1.0, 1.0, 1.0})
 
     core.draw_softbody(softbody);
-    
+
     if core.button(font, "button", {0, 0}, {300, 100}) then
         core.print("YOO")
     end

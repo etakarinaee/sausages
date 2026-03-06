@@ -3,6 +3,7 @@
 #define SOFT_BODY_H
 
 #include "cmath.h"
+#include "renderer.h"
 
 struct ph_soft_body_point {
     struct vec2 pos;
@@ -27,6 +28,10 @@ struct ph_soft_body {
     float point_radius;
     float stiffness;
     float damping;
+
+    struct mesh mesh;
+    struct vec2 pos;
+    struct vec2 size;
 };
 
 struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size);

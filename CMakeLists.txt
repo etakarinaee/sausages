@@ -27,6 +27,8 @@ set(ARC_INPUTS
         ${CMAKE_SOURCE_DIR}/src/core/shaders/texture.frag
         ${CMAKE_SOURCE_DIR}/src/core/shaders/text.vert
         ${CMAKE_SOURCE_DIR}/src/core/shaders/text.frag
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/mesh.vert
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/mesh.frag
 
         ${CMAKE_SOURCE_DIR}/src/game/client.lua
         ${CMAKE_SOURCE_DIR}/src/game/server.lua

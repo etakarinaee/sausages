@@ -1,29 +1,24 @@
 
-#include "renderer.h"
 #include "archive.h"
 #include "freetype/freetype.h"
+#include "renderer.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 
 #include <stbi/stb_image.h>
 
 struct render_context render_context;
 
 static const float rectangle_vertices[] = {
-    /* POS           UV     */     
-    0.5f, 0.5f,     1.0f, 1.0f,  
-    0.5f, -0.5f,    1.0f, 0.0f,  
-    -0.5f, -0.5f,   0.0f, 0.0f,  
-    -0.5f, 0.5f,    0.0f, 1.0f,
+    /* POS           UV     */
+    0.5f,  0.5f,  1.0f, 1.0f, 0.5f,  -0.5f, 1.0f, 0.0f,
+    -0.5f, -0.5f, 0.0f, 0.0f, -0.5f, 0.5f,  0.0f, 1.0f,
 };
 
-static const unsigned int rectangle_indices[] = {
-    0, 1, 3,
-    1, 2, 3
-};
+static const unsigned int rectangle_indices[] = {0, 1, 3, 1, 2, 3};
 
 static void buffers_init(struct render_context *r) {
     glGenVertexArrays(1, &r->vao);
@@ -31,20 +26,25 @@ static void buffers_init(struct render_context *r) {
 
     glGenBuffers(1, &r->vbo);
     glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle_vertices), rectangle_vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle_vertices),
+                 rectangle_vertices, GL_STATIC_DRAW);
 
     glGenBuffers(1, &r->ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rectangle_indices), rectangle_indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rectangle_indices),
+                 rectangle_indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+                          (void *)0);
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+                          (void *)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
 }
 
-static int program_init(const char *vert_path, const char *frag_path, GLuint *program) {
+static int program_init(const char *vert_path, const char *frag_path,
+                        GLuint *program) {
     int error = 0;
     int success;
     char info_log[512];
@@ -152,8 +152,12 @@ int renderer_init(struct render_context *r) {
         return 1;
     }
 
+    if (program_init("mesh.vert", "mesh.frag", &r->mesh_program)) {
+        fprintf(stderr, "failed to init shaders!\n");
+        return 1;
+    }
+
     glEnable(GL_BLEND);
-    //glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     r->camera.pos = (struct vec2){0.0f, 0.0f};
@@ -174,9 +178,11 @@ int renderer_init(struct render_context *r) {
 static void font_deinit(const struct render_context *r) {
     FT_Done_FreeType(r->ft_lib);
     for (size_t i = 0; i < r->fonts_count; i++) {
-        if (r->fonts[i].chars) free(r->fonts[i].chars);
+        if (r->fonts[i].chars)
+            free(r->fonts[i].chars);
     }
-    if (r->fonts) free(r->fonts);
+    if (r->fonts)
+        free(r->fonts);
 }
 
 void renderer_deinit(const struct render_context *r) {
@@ -184,10 +190,41 @@ void renderer_deinit(const struct render_context *r) {
     font_deinit(r);
 }
 
+struct mesh renderer_create_mesh(float *vertices, int vertices_count,
+                                 uint32_t *indices, int indices_count,
+                                 struct color3 color) {
+    struct mesh mesh;
+    mesh.vertex_count = vertices_count;
+    mesh.indices_count = indices_count;
+    mesh.color = color;
+
+    glGenVertexArrays(1, &mesh.vao);
+    glBindVertexArray(mesh.vao);
+
+    glGenBuffers(1, &mesh.vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertices_count * 2 * sizeof(float), vertices,
+                 GL_DYNAMIC_DRAW);
+
+    glGenBuffers(1, &mesh.ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_count * sizeof(uint32_t),
+                 indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float),
+                          (void *)0);
+    glEnableVertexAttribArray(0);
+
+    /* No texture coordinates for now */
+
+    return mesh;
+}
+
 void renderer_push_quad(struct render_context *r, struct quad_data data) {
     if (r->quads_count + 1 > r->quads_capacity) {
         const size_t new_cap = r->quads_capacity ? r->quads_capacity * 2 : 2;
-        struct quad_data *new_data = realloc(r->quads, new_cap * sizeof(struct quad_data));
+        struct quad_data *new_data =
+            realloc(r->quads, new_cap * sizeof(struct quad_data));
         if (!new_data) {
             fprintf(stderr, "out of memory!\n");
             return;
@@ -199,30 +236,33 @@ void renderer_push_quad(struct render_context *r, struct quad_data data) {
     r->quads[r->quads_count++] = data;
 }
 
-static struct vec2 anchoring_pos(struct vec2 pos, struct vec2 scale, int anchor) {
+static struct vec2 anchoring_pos(struct vec2 pos, struct vec2 scale,
+                                 int anchor) {
     struct vec2 anchor_pos = pos;
 
     switch (anchor) {
-        case ANCHOR_BOTTOM_LEFT:
-            anchor_pos.x += scale.x * 0.5f;
-            anchor_pos.y += scale.y * 0.5f;
-            break;
+    case ANCHOR_BOTTOM_LEFT:
+        anchor_pos.x += scale.x * 0.5f;
+        anchor_pos.y += scale.y * 0.5f;
+        break;
 
-        case ANCHOR_TOP_LEFT:
-            anchor_pos.x += scale.x * 0.5f;
-            anchor_pos.y -= scale.y * 0.5f;
-            break;
+    case ANCHOR_TOP_LEFT:
+        anchor_pos.x += scale.x * 0.5f;
+        anchor_pos.y -= scale.y * 0.5f;
+        break;
 
-        /* default without calculation here */
-        case ANCHOR_CENTER:
-        default:
-            break;
+    /* default without calculation here */
+    case ANCHOR_CENTER:
+    default:
+        break;
     }
 
     return anchor_pos;
 }
 
-void renderer_push_rect(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, struct color3 c, int anchor) {
+void renderer_push_rect(struct render_context *r, struct vec2 pos,
+                        struct vec2 scale, float rotation, struct color3 c,
+                        int anchor) {
     struct vec2 anchor_pos = anchoring_pos(pos, scale, anchor);
 
     struct quad_data data = (struct quad_data){
@@ -236,7 +276,8 @@ void renderer_push_rect(struct render_context *r, struct vec2 pos, struct vec2 s
     renderer_push_quad(r, data);
 }
 
-void renderer_push_circle(struct render_context *r, struct vec2 pos, float radius, struct color3 c) {
+void renderer_push_circle(struct render_context *r, struct vec2 pos,
+                          float radius, struct color3 c) {
     struct quad_data data = (struct quad_data){
         .type = QUAD_TYPE_CIRCLE,
         .pos = pos,
@@ -248,7 +289,9 @@ void renderer_push_circle(struct render_context *r, struct vec2 pos, float radiu
     renderer_push_quad(r, data);
 }
 
-void renderer_push_texture(struct render_context *r, struct vec2 pos, struct vec2 scale, float rotation, texture_id texture, int anchor) {
+void renderer_push_texture(struct render_context *r, struct vec2 pos,
+                           struct vec2 scale, float rotation,
+                           texture_id texture, int anchor) {
     struct vec2 anchor_pos = anchoring_pos(pos, scale, anchor);
 
     struct quad_data data = (struct quad_data){
@@ -262,7 +305,9 @@ void renderer_push_texture(struct render_context *r, struct vec2 pos, struct vec
     renderer_push_quad(r, data);
 }
 
-static void renderer_push_char(struct render_context *r, struct vec2 pos, struct vec2 scale, struct color3 text_color, struct font *font, int char_index) {
+static void renderer_push_char(struct render_context *r, struct vec2 pos,
+                               struct vec2 scale, struct color3 text_color,
+                               struct font *font, int char_index) {
     struct character *ch = &font->chars[char_index];
 
     struct quad_data data = (struct quad_data){
@@ -279,16 +324,18 @@ static void renderer_push_char(struct render_context *r, struct vec2 pos, struct
     renderer_push_quad(r, data);
 }
 
-static float measure_text(struct render_context *r, float pixel_height, font_id font, const char* text) {
+static float measure_text(struct render_context *r, float pixel_height,
+                          font_id font, const char *text) {
     struct font *f = &r->fonts[font];
 
-    int font_pixel_size = f->font_size; 
+    int font_pixel_size = f->font_size;
     float scale = pixel_height / (float)font_pixel_size;
 
     float width = 0.0f;
-    for (const char* c = text; *c; c++) {
+    for (const char *c = text; *c; c++) {
         int char_index = (int)(*c - (char)f->char_range.x);
-        if (char_index < 0 || char_index >= f->char_range.y - f->char_range.x + 1)
+        if (char_index < 0 ||
+            char_index >= f->char_range.y - f->char_range.x + 1)
             continue;
 
         struct character *ch = &f->chars[char_index];
@@ -298,7 +345,8 @@ static float measure_text(struct render_context *r, float pixel_height, font_id 
     return width;
 }
 
-void renderer_push_text(struct render_context *r, struct vec2 pos, float pixel_height, struct color3 text_color,
+void renderer_push_text(struct render_context *r, struct vec2 pos,
+                        float pixel_height, struct color3 text_color,
                         font_id font, const char *text, int anchor) {
     struct font *f = &r->fonts[font];
 
@@ -307,47 +355,73 @@ void renderer_push_text(struct render_context *r, struct vec2 pos, float pixel_h
 
     float pos_x = pos.x;
     int baseline_y = pos.y;
-    
+
     /* custom anchorin needed for font */
     switch (anchor) {
-        case ANCHOR_TOP_LEFT:
-            baseline_y -= pixel_height;
-            break;
+    case ANCHOR_TOP_LEFT:
+        baseline_y -= pixel_height;
+        break;
 
-        case ANCHOR_CENTER: {
-            /* TODO: maybe some chaching */
-            float width = measure_text(r, pixel_height, font, text);
-            pos_x -= width * 0.5f;
-            break;
-        }
-
-        /* default dont need to change anything */
-        case ANCHOR_BOTTOM_LEFT:
-        default:
-            break;
+    case ANCHOR_CENTER: {
+        /* TODO: maybe some chaching */
+        float width = measure_text(r, pixel_height, font, text);
+        pos_x -= width * 0.5f;
+        break;
     }
 
-    for (const char* c = text; *c; c++) {
+    /* default dont need to change anything */
+    case ANCHOR_BOTTOM_LEFT:
+    default:
+        break;
+    }
+
+    for (const char *c = text; *c; c++) {
         int char_index = (int)(*c - (char)f->char_range.x);
-        if (char_index < 0 || char_index >= f->char_range.y - f->char_range.x + 1)
+        if (char_index < 0 ||
+            char_index >= f->char_range.y - f->char_range.x + 1)
             continue;
 
         struct character *ch = &f->chars[char_index];
 
-        struct vec2 glyph_size = {
-            .x = ch->size.x * scale,
-            .y = ch->size.y * scale
-        };
+        struct vec2 glyph_size = {.x = ch->size.x * scale,
+                                  .y = ch->size.y * scale};
 
         struct vec2 glyph_pos = {
             .x = pos_x + ch->bearing.x * scale + glyph_size.x * 0.5f,
-            .y = baseline_y - (ch->size.y - ch->bearing.y) * scale + glyph_size.y * 0.5f,
+            .y = baseline_y - (ch->size.y - ch->bearing.y) * scale +
+                 glyph_size.y * 0.5f,
         };
 
         renderer_push_char(r, glyph_pos, glyph_size, text_color, f, char_index);
 
         pos_x += ch->advance * scale;
     }
+}
+
+void renderer_push_mesh(struct render_context *r, struct mesh mesh,
+                        struct vec2 pos, struct vec2 scale) {
+    struct quad_data data = (struct quad_data){
+        .type = QUAD_TYPE_MESH,
+        .pos = pos,
+        .scale = scale,
+        .rotation = 0.0f,
+        .data.mesh = mesh,
+    };
+
+    renderer_push_quad(r, data);
+}
+
+void renderer_update_mesh(struct mesh *mesh, float *vertices, int vertex_count,
+                          struct color3 color) {
+    if (mesh->vertex_count != vertex_count)
+        return;
+
+    mesh->color = color;
+    glBindVertexArray(mesh->vao);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, vertex_count * 2 * sizeof(float),
+                    vertices);
+    glBindVertexArray(render_context.vao);
 }
 
 void renderer_draw(struct render_context *r) {
@@ -379,52 +453,62 @@ void renderer_draw(struct render_context *r) {
         GLint uniform_matrix_cam_loc;
 
         switch (data->type) {
-            case QUAD_TYPE_RECT:
+        case QUAD_TYPE_RECT:
+            goto render_rect;
+        case QUAD_TYPE_CIRCLE:
+            goto render_circle;
+        case QUAD_TYPE_TEXTURE:
+            if (data->data.texture.tex_id == CORE_RENDERER_QUAD_NO_TEXTURE) {
                 goto render_rect;
-            case QUAD_TYPE_CIRCLE:
-                goto render_circle;
-            case QUAD_TYPE_TEXTURE:
-                if (data->data.texture.tex_id == CORE_RENDERER_QUAD_NO_TEXTURE) {
-                    goto render_rect;
-                }        
-                goto render_texture;
-            case QUAD_TYPE_TEXT:
-                goto render_text;
-            default:
-                goto render_rect;
+            }
+            goto render_texture;
+        case QUAD_TYPE_TEXT:
+            goto render_text;
+        case QUAD_TYPE_MESH:
+            goto render_mesh;
+        default:
+            goto render_rect;
         }
 
         GLint sampler_loc;
         GLint uniform_color_loc;
 
-        /* RECT */
-        render_rect:
+    /* RECT */
+    render_rect:
         glUseProgram(r->quad_program);
-        uniform_matrix_model_loc = glGetUniformLocation(r->quad_program, "u_model");
-        uniform_matrix_cam_loc = glGetUniformLocation(r->quad_program, "u_proj");
+        uniform_matrix_model_loc =
+            glGetUniformLocation(r->quad_program, "u_model");
+        uniform_matrix_cam_loc =
+            glGetUniformLocation(r->quad_program, "u_proj");
 
         uniform_color_loc = glGetUniformLocation(r->quad_program, "u_color");
-        glUniform3f(uniform_color_loc, data->data.color.r, data->data.color.g, data->data.color.b);
+        glUniform3f(uniform_color_loc, data->data.color.r, data->data.color.g,
+                    data->data.color.b);
         goto render;
 
-        /* CIRCLE */
-        render_circle:
+    /* CIRCLE */
+    render_circle:
         glUseProgram(r->circle_program);
-        uniform_matrix_model_loc = glGetUniformLocation(r->circle_program, "u_model");
-        uniform_matrix_cam_loc = glGetUniformLocation(r->circle_program, "u_proj");
+        uniform_matrix_model_loc =
+            glGetUniformLocation(r->circle_program, "u_model");
+        uniform_matrix_cam_loc =
+            glGetUniformLocation(r->circle_program, "u_proj");
 
         uniform_color_loc = glGetUniformLocation(r->circle_program, "u_color");
-        glUniform3f(uniform_color_loc, data->data.color.r, data->data.color.g, data->data.color.b);
-  
-        GLint uniform_radius_loc = glGetUniformLocation(r->circle_program, "u_radius");
+        glUniform3f(uniform_color_loc, data->data.color.r, data->data.color.g,
+                    data->data.color.b);
+
+        GLint uniform_radius_loc =
+            glGetUniformLocation(r->circle_program, "u_radius");
         glUniform1f(uniform_radius_loc, data->scale.x);
 
         goto render;
 
-        /* TEXTURE */
-        render_texture:
+    /* TEXTURE */
+    render_texture:
         glUseProgram(r->tex_program);
-        uniform_matrix_model_loc = glGetUniformLocation(r->tex_program, "u_model");
+        uniform_matrix_model_loc =
+            glGetUniformLocation(r->tex_program, "u_model");
         uniform_matrix_cam_loc = glGetUniformLocation(r->tex_program, "u_proj");
 
         glActiveTexture(GL_TEXTURE0);
@@ -433,33 +517,61 @@ void renderer_draw(struct render_context *r) {
         glUniform1i(sampler_loc, 0);
         goto render;
 
-        /* TEXT */
-        render_text:
+    /* TEXT */
+    render_text:
         glUseProgram(r->text_program);
-        uniform_matrix_model_loc = glGetUniformLocation(r->text_program, "u_model");
-        uniform_matrix_cam_loc = glGetUniformLocation(r->text_program, "u_proj");
+        uniform_matrix_model_loc =
+            glGetUniformLocation(r->text_program, "u_model");
+        uniform_matrix_cam_loc =
+            glGetUniformLocation(r->text_program, "u_proj");
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, data->data.text.tex_id);
         sampler_loc = glGetUniformLocation(r->text_program, "u_texture");
         glUniform1i(sampler_loc, 0);
 
-        GLint uniform_glyph_min_loc = glGetUniformLocation(r->text_program, "u_glyph_min");
-        GLint uniform_glyph_size_loc = glGetUniformLocation(r->text_program, "u_glyph_size");
-        GLint uniform_text_color_loc = glGetUniformLocation(r->text_program, "u_text_color");
-        glUniform2f(uniform_glyph_min_loc, data->data.text.min.x, data->data.text.min.y);
-        glUniform2f(uniform_glyph_size_loc, data->data.text.size.x, data->data.text.size.y);
-        glUniform3f(uniform_text_color_loc, data->data.text.color.r, data->data.text.color.g, data->data.text.color.b);
+        GLint uniform_glyph_min_loc =
+            glGetUniformLocation(r->text_program, "u_glyph_min");
+        GLint uniform_glyph_size_loc =
+            glGetUniformLocation(r->text_program, "u_glyph_size");
+        GLint uniform_text_color_loc =
+            glGetUniformLocation(r->text_program, "u_text_color");
+        glUniform2f(uniform_glyph_min_loc, data->data.text.min.x,
+                    data->data.text.min.y);
+        glUniform2f(uniform_glyph_size_loc, data->data.text.size.x,
+                    data->data.text.size.y);
+        glUniform3f(uniform_text_color_loc, data->data.text.color.r,
+                    data->data.text.color.g, data->data.text.color.b);
 
         glDepthMask(GL_FALSE);
         goto render; /* In case for more labels */
 
-        render:
+    /* MESH */
+    render_mesh:
+        glUseProgram(r->mesh_program);
+        uniform_matrix_model_loc =
+            glGetUniformLocation(r->mesh_program, "u_model");
+        uniform_matrix_cam_loc =
+            glGetUniformLocation(r->mesh_program, "u_proj");
+
+        uniform_color_loc = glGetUniformLocation(r->mesh_program, "u_color");
+        glUniform3f(uniform_color_loc, data->data.mesh.color.r,
+                    data->data.mesh.color.g, data->data.mesh.color.b);
+        glBindVertexArray(data->data.mesh.vao);
+        goto render;
+
+    render:
         /* Always Used Uniforms */
         glUniformMatrix4fv(uniform_matrix_model_loc, 1, GL_FALSE, m.m);
         glUniformMatrix4fv(uniform_matrix_cam_loc, 1, GL_FALSE, cam_m.m);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        if (data->type == QUAD_TYPE_MESH) {
+            glDrawElements(GL_TRIANGLES, data->data.mesh.indices_count,
+                           GL_UNSIGNED_INT, 0);
+        } else {
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        }
         glDepthMask(GL_TRUE);
+        glBindVertexArray(r->vao);
     }
 
     r->quads_count = 0;
@@ -485,9 +597,12 @@ texture_id renderer_load_texture(const char *path) {
         return -1;
     }
 
-    const GLint format = channels == 4 ? GL_RGBA : channels == 1 ? GL_RED : GL_RGB;
+    const GLint format = channels == 4   ? GL_RGBA
+                         : channels == 1 ? GL_RED
+                                         : GL_RGB;
 
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format,
+                 GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     stbi_image_free(data);
@@ -495,13 +610,17 @@ texture_id renderer_load_texture(const char *path) {
     return (texture_id)texture;
 }
 
-static uint8_t* font_get_atlas(const char* path, int font_size, struct vec2i char_range, int *width, int *height, struct font* font) {
-    if (!path) return NULL;
+static uint8_t *font_get_atlas(const char *path, int font_size,
+                               struct vec2i char_range, int *width, int *height,
+                               struct font *font) {
+    if (!path)
+        return NULL;
 
     // TODO: make the loading chars not constant
     font->char_range = char_range;
     const int chars_count = font->char_range.y - font->char_range.x + 1;
-    if (chars_count < 0) return NULL;
+    if (chars_count < 0)
+        return NULL;
 
     font->chars = malloc(chars_count * sizeof(struct character));
 
@@ -514,7 +633,7 @@ static uint8_t* font_get_atlas(const char* path, int font_size, struct vec2i cha
     font->atlas_width = *width;
     font->atlas_height = *height;
 
-    uint8_t* data = calloc(*width * *height, sizeof(uint8_t));
+    uint8_t *data = calloc(*width * *height, sizeof(uint8_t));
     if (!data) {
         fprintf(stderr, "out of memory loading font: %s\n", path);
         return NULL;
@@ -527,8 +646,7 @@ static uint8_t* font_get_atlas(const char* path, int font_size, struct vec2i cha
         fprintf(stderr, "unkown format: %s\n", path);
         free(data);
         return NULL;
-    }
-    else if (error) {
+    } else if (error) {
         fprintf(stderr, "faced unkown error when loading: %s\n", path);
         free(data);
         return NULL;
@@ -548,16 +666,17 @@ static uint8_t* font_get_atlas(const char* path, int font_size, struct vec2i cha
 
         int cell_x = (index % chars_per_line) * char_len;
         int cell_y = (index / chars_per_line) * char_len;
- 
-        // write character into buffer 
+
+        // write character into buffer
         for (uint32_t y = 0; y < face->glyph->bitmap.rows; y++) {
-            for (uint32_t x = 0; x < face->glyph->bitmap.width; x++) { // probaly some move to right needed
+            for (uint32_t x = 0; x < face->glyph->bitmap.width;
+                 x++) { // probaly some move to right needed
                 int dst_x = cell_x + x;
                 int dst_y = cell_y + y;
 
-                /* Overflow due to glyph being larger than cell in this case the 
-                    glyph will just be a little weird at the momemnt but it shouldnt 
-                    really be that visible */
+                /* Overflow due to glyph being larger than cell in this case the
+                    glyph will just be a little weird at the momemnt but it
+                   shouldnt really be that visible */
                 if (dst_x >= *width) {
                     continue;
                 }
@@ -566,14 +685,18 @@ static uint8_t* font_get_atlas(const char* path, int font_size, struct vec2i cha
                 }
 
                 int dst_index = dst_y * (*width) + dst_x;
-                data[dst_index] = face->glyph->bitmap.buffer[y * face->glyph->bitmap.pitch + x];
+                data[dst_index] =
+                    face->glyph->bitmap
+                        .buffer[y * face->glyph->bitmap.pitch + x];
             }
         }
 
         struct character *ch = &font->chars[index];
 
-        ch->size = (struct vec2i){face->glyph->bitmap.width, face->glyph->bitmap.rows};
-        ch->bearing = (struct vec2i){face->glyph->bitmap_left, face->glyph->bitmap_top};
+        ch->size =
+            (struct vec2i){face->glyph->bitmap.width, face->glyph->bitmap.rows};
+        ch->bearing =
+            (struct vec2i){face->glyph->bitmap_left, face->glyph->bitmap_top};
         ch->advance = face->glyph->advance.x >> 6;
 
         ch->u0 = (float)cell_x / *width;
@@ -589,10 +712,12 @@ static uint8_t* font_get_atlas(const char* path, int font_size, struct vec2i cha
     return data;
 }
 
-font_id renderer_load_font(struct render_context *r, const char *path, int font_size, struct vec2i char_range) {
+font_id renderer_load_font(struct render_context *r, const char *path,
+                           int font_size, struct vec2i char_range) {
     if (r->fonts_count + 1 >= r->fonts_capacity) {
         size_t new_cap = r->fonts_capacity *= 2;
-        struct font* new_data = realloc(r->fonts, new_cap * sizeof(struct font));
+        struct font *new_data =
+            realloc(r->fonts, new_cap * sizeof(struct font));
         if (!new_data) {
             fprintf(stderr, "failed pushing another element in font array!\n");
             return -1;
@@ -606,8 +731,10 @@ font_id renderer_load_font(struct render_context *r, const char *path, int font_
     r->fonts[font_index].font_size = font_size;
 
     int width, height;
-    uint8_t* data = font_get_atlas(path, font_size, char_range, &width, &height, &r->fonts[font_index]);
-    if (!data) return -1;
+    uint8_t *data = font_get_atlas(path, font_size, char_range, &width, &height,
+                                   &r->fonts[font_index]);
+    if (!data)
+        return -1;
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
@@ -621,11 +748,11 @@ font_id renderer_load_font(struct render_context *r, const char *path, int font_
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED,
+                 GL_UNSIGNED_BYTE, data);
 
     free(data);
 
     r->fonts[font_index].tex = (texture_id)texture;
     return (font_id)font_index;
 }
-

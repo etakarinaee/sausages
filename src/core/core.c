@@ -134,6 +134,7 @@ int main(void) {
     glfwTerminate();
 
 #ifndef SERVER
+    game_deinit();
     voice_quit();
 #endif
 
