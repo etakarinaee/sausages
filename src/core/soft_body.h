@@ -24,6 +24,7 @@ struct ph_soft_body {
     struct ph_soft_body_point *points;
     struct ph_spring *springs;
 
+    float point_radius;
     float stiffness;
     float damping;
 };

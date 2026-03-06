@@ -6,7 +6,7 @@ local chat = require('chat')
 local local_id = nil
 local players = {}
 
-local platform = { x = 0.0, y = -0.5, w = 800, h = 100 }
+local platform = { x = 0.0, y = 0.0, w = 800, h = 100 }
 
 local gravity = -300.0
 local friction = 0.88

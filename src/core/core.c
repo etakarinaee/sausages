@@ -97,7 +97,7 @@ int main(void) {
     glfwSwapInterval(0);
 
     /* TODO: tmp */
-    struct ph_soft_body b = ph_soft_body_create_rect((struct vec2){0, 0}, (struct vec2){5, 10});
+    struct ph_soft_body b = ph_soft_body_create_rect((struct vec2){0, 300}, (struct vec2){5, 10});
 
     double last_time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {

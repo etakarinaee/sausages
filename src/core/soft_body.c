@@ -2,6 +2,7 @@
 #include "soft_body.h"
 #include "cmath.h"
 #include "renderer.h"
+#include "collision.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -18,11 +19,12 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
 
     float rest_len = 30.0f;
 
-    b.damping = 0.9f;
-    b.stiffness = 1.0f;
+    b.point_radius = 15.0f;
+    b.damping = 3.0f;
+    b.stiffness = 100.0f;
 
     b.points_count = (int)(size.x * size.y);
-    if (b.points_count < 2 || b.points_count % 2 == 1) return b;
+    if (b.points_count < 2) return b;
 
     b.points = malloc(b.points_count * sizeof(struct ph_soft_body_point));
 
@@ -116,6 +118,29 @@ static float ph_get_spring_force(struct ph_soft_body *b, struct ph_spring *s) {
     return f_spring + f_damp;
 }
 
+static void ph_apply_spring_forces(struct ph_soft_body *b, struct ph_spring *s) {
+    struct ph_soft_body_point *start = &b->points[s->start];
+    struct ph_soft_body_point *end   = &b->points[s->end];
+
+    struct vec2 delta = math_vec2_subtract(end->pos, start->pos);
+    float dist = math_vec2_length(delta);
+    if (dist < 0.0001f) return;
+
+    struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
+
+    // spring force along norm
+    float f_spring = (dist - s->rest_len) * b->stiffness;
+    struct vec2 spring_f = math_vec2_scale(norm, f_spring);
+
+    // damping force along norm (opposes relative velocity projected onto spring axis)
+    float rel_vel_along = math_vec2_dot(math_vec2_subtract(end->vel, start->vel), norm);
+    struct vec2 damp_f = math_vec2_scale(norm, rel_vel_along * b->damping);
+
+    struct vec2 total = math_vec2_add(spring_f, damp_f);
+    start->force = math_vec2_add(start->force, total);
+    end->force   = math_vec2_subtract(end->force, total);
+}
+
 static void ph_soft_body_update_point(struct ph_soft_body *b, int idx, struct ph_soft_body_point *p, float dt) {
     p->force = (struct vec2){0, 0};
 
@@ -145,15 +170,50 @@ static void ph_soft_body_update_point(struct ph_soft_body *b, int idx, struct ph
     p->pos = math_vec2_add(p->pos, math_vec2_scale(p->vel, dt));
 }
 
+static void ph_soft_body_point_self_collision(struct ph_soft_body *b, int idx, struct ph_soft_body_point *p) {
+    for (int i = 0; i < b->points_count; i++) {
+        if (i == idx) continue;
+
+        struct ph_soft_body_point *other = &b->points[i];
+        
+        struct vec2 delta = math_vec2_subtract(p->pos, other->pos);
+        float dist = math_vec2_length(delta);
+
+        if (dist < b->point_radius * 2.0f && dist > 0.0001f) {
+            struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
+            float overlap = b->point_radius * 2.0f - dist;
+
+            struct vec2 rel_vel = math_vec2_subtract(p->vel, other->vel);
+            float vel_along_norm = math_vec2_dot(rel_vel, norm);
+
+            if (vel_along_norm < 0.0f) {
+                float restitution = 0.3f; 
+                float impulse = -(1.0f + restitution) * vel_along_norm / (1.0f / p->mass + 1.0f / other->mass);
+
+                struct vec2 impulse_vec = math_vec2_scale(norm, impulse);
+                p->vel = math_vec2_add(p->vel, math_vec2_scale(impulse_vec,  1.0f / p->mass));
+                other->vel = math_vec2_subtract(other->vel, math_vec2_scale(impulse_vec,  1.0f / other->mass));
+            }
+        }
+    }
+}
+
 void ph_soft_body_update(struct ph_soft_body *b, float dt) {
     for (int i = 0; i < b->points_count; i++) {
         ph_soft_body_update_point(b, i, &b->points[i], dt);
+
+        if (coll_check_point_rect(b->points[i].pos, (struct vec2){-400, -50}, (struct vec2){800, 100})) {
+            b->points[i].pos.y = 50.0f;
+            b->points[i].vel.y *= -0.3f;
+        }
+
+        ph_soft_body_point_self_collision(b, i, &b->points[i]);
     }
 }
 
 void ph_soft_body_draw(struct ph_soft_body *b) {
     for (int i = 0; i < b->points_count; i++) {
-        renderer_push_circle(&render_context, b->points[i].pos, 15.0f, (struct color3){1.0f, 0.0f, 0.0f});
+        renderer_push_circle(&render_context, b->points[i].pos, b->point_radius, (struct color3){1.0f, 0.0f, 0.0f});
     }
 }
 
