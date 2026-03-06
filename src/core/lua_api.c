@@ -17,6 +17,7 @@
 #include "collision.h"
 #include "input.h"
 #include "voice.h"
+#include "soft_body.h"
 
 // metatables
 #define SERVER_MT "net_server"

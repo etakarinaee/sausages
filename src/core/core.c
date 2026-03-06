@@ -14,6 +14,8 @@
 #include "renderer.h"
 #include "voice.h"
 
+#include "soft_body.h" /* temp as long as no lua api */
+
 #ifdef SERVER
 #define ENTRY SAUSAGES_ENTRY_SERVER
 #else
@@ -22,12 +24,14 @@
 
 static lua_State *L;
 
+#ifndef SERVER
 static void resize_callback(GLFWwindow *window, const int width, const int height) {
     struct render_context *r = glfwGetWindowUserPointer(window);
     r->width = width;
     r->height = height;
     glViewport(0, 0, width, height);
 }
+#endif
 
 int main(void) {
     FILE *test = fopen(SAUSAGES_DATA, "rb");
@@ -92,6 +96,9 @@ int main(void) {
 #else
     glfwSwapInterval(0);
 
+    /* TODO: tmp */
+    struct ph_soft_body b = ph_soft_body_create_rect((struct vec2){0, 0}, (struct vec2){10, 2});
+
     double last_time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
         const double current_time = glfwGetTime();
@@ -103,10 +110,16 @@ int main(void) {
         lua_call_update(L, delta_time);
         voice_update();
 
+        /* TODO: tmp */ 
+        ph_soft_body_update(&b, delta_time);
+
         input_clear_text(&input_context);
 
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        /* TODO: tmp */ 
+        ph_soft_body_draw(&b);
 
         renderer_draw(&render_context);
 
