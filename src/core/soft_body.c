@@ -8,7 +8,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define PH_GRAVITY_VEC ((struct vec2){0.0f, -100.0f})
+/* high because of stubsteps */
+#define PH_GRAVITY_VEC ((struct vec2){0.0f, -900.0f})
 
 struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) {
     struct ph_soft_body b;
@@ -20,8 +21,8 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
     float rest_len = 30.0f;
 
     b.point_radius = 15.0f;
-    b.damping = 3.0f;
-    b.stiffness = 100.0f;
+    b.damping = 4.0f;
+    b.stiffness = 400.0f;
 
     b.points_count = (int)(size.x * size.y);
     if (b.points_count < 2) return b;
@@ -100,24 +101,6 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
     return b;
 }
 
-static float ph_get_spring_force(struct ph_soft_body *b, struct ph_spring *s) {
-    struct ph_soft_body_point start = b->points[s->start];
-    struct ph_soft_body_point end  = b->points[s->end];
-
-    struct vec2 delta = math_vec2_subtract(end.pos, start.pos);
-    float dist = math_vec2_length(delta);
-
-    if (dist < 0.0001f) {
-        return 0.0f;
-    }
-
-    struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
-    float f_spring = (dist - s->rest_len) * b->stiffness;
-    float f_damp = math_vec2_dot(norm, math_vec2_subtract(end.vel, start.vel)) * b->damping;
-
-    return f_spring + f_damp;
-}
-
 static void ph_apply_spring_forces(struct ph_soft_body *b, struct ph_spring *s) {
     struct ph_soft_body_point *start = &b->points[s->start];
     struct ph_soft_body_point *end   = &b->points[s->end];
@@ -128,46 +111,15 @@ static void ph_apply_spring_forces(struct ph_soft_body *b, struct ph_spring *s) 
 
     struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
 
-    // spring force along norm
     float f_spring = (dist - s->rest_len) * b->stiffness;
     struct vec2 spring_f = math_vec2_scale(norm, f_spring);
 
-    // damping force along norm (opposes relative velocity projected onto spring axis)
     float rel_vel_along = math_vec2_dot(math_vec2_subtract(end->vel, start->vel), norm);
     struct vec2 damp_f = math_vec2_scale(norm, rel_vel_along * b->damping);
 
     struct vec2 total = math_vec2_add(spring_f, damp_f);
     start->force = math_vec2_add(start->force, total);
-    end->force   = math_vec2_subtract(end->force, total);
-}
-
-static void ph_soft_body_update_point(struct ph_soft_body *b, int idx, struct ph_soft_body_point *p, float dt) {
-    p->force = (struct vec2){0, 0};
-
-    p->force = math_vec2_add(p->force, PH_GRAVITY_VEC);
-
-    /* TODO: optimize this by creation a spring children table in point or smth */
-    for (int i = 0; i < b->springs_count; i++) {
-        if (idx == b->springs[i].start || idx == b->springs[i].end) {
-            struct ph_spring *s = &b->springs[i];
-            float spring_force = ph_get_spring_force(b, s);
-
-            struct ph_soft_body_point start = b->points[s->start];
-            struct ph_soft_body_point end = b->points[s->end];
-
-            struct vec2 spring_f;
-            if (idx == b->springs[i].end) {
-                spring_f = math_vec2_scale(math_vec2_norm(math_vec2_subtract(start.pos, end.pos)), spring_force);
-            }
-            else {
-                spring_f = math_vec2_scale(math_vec2_norm(math_vec2_subtract(end.pos, start.pos)), spring_force);
-            }
-            p->force = math_vec2_add(p->force, spring_f);
-        }
-    }
-
-    p->vel = math_vec2_add(p->vel, math_vec2_scale(math_vec2_scale(p->force, dt), 1.0f / p->mass));
-    p->pos = math_vec2_add(p->pos, math_vec2_scale(p->vel, dt));
+    end->force = math_vec2_subtract(end->force, total);
 }
 
 static void ph_soft_body_point_self_collision(struct ph_soft_body *b, int idx, struct ph_soft_body_point *p) {
@@ -181,7 +133,6 @@ static void ph_soft_body_point_self_collision(struct ph_soft_body *b, int idx, s
 
         if (dist < b->point_radius * 2.0f && dist > 0.0001f) {
             struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
-            float overlap = b->point_radius * 2.0f - dist;
 
             struct vec2 rel_vel = math_vec2_subtract(p->vel, other->vel);
             float vel_along_norm = math_vec2_dot(rel_vel, norm);
@@ -198,16 +149,34 @@ static void ph_soft_body_point_self_collision(struct ph_soft_body *b, int idx, s
     }
 }
 
-void ph_soft_body_update(struct ph_soft_body *b, float dt) {
+void ph_soft_body_update_substep(struct ph_soft_body *b, float dt) {
     for (int i = 0; i < b->points_count; i++) {
-        ph_soft_body_update_point(b, i, &b->points[i], dt);
+        b->points[i].force = PH_GRAVITY_VEC;
+    }
+    for (int i = 0; i < b->springs_count; i++) {
+        ph_apply_spring_forces(b, &b->springs[i]);
+    }
 
-        if (coll_check_point_rect(b->points[i].pos, (struct vec2){-400, -50}, (struct vec2){800, 100})) {
-            b->points[i].pos.y = 50.0f;
-            b->points[i].vel.y *= -0.3f;
+    for (int i = 0; i < b->points_count; i++) {
+        struct ph_soft_body_point *p = &b->points[i];
+        p->vel = math_vec2_add(p->vel, math_vec2_scale(p->force, dt / p->mass));
+        p->pos = math_vec2_add(p->pos, math_vec2_scale(p->vel, dt));
+
+        if (coll_check_point_rect(p->pos, (struct vec2){-400, -50}, (struct vec2){800, 100})) {
+            p->pos.y = 50.0f;
+            p->vel.y *= -0.3f;
         }
 
-        ph_soft_body_point_self_collision(b, i, &b->points[i]);
+        ph_soft_body_point_self_collision(b, i, p);
+        p->vel = math_vec2_scale(p->vel, 0.999f);
+    }
+}
+
+void ph_soft_body_update(struct ph_soft_body *b, float dt) {
+    const int substeps = 8;
+    const float sub_dt = dt / substeps;
+    for (int s = 0; s < substeps; s++) {
+        ph_soft_body_update_substep(b, sub_dt);
     }
 }
 
