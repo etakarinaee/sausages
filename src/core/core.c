@@ -1,5 +1,3 @@
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,13 +6,13 @@
 #include <luajit-2.1/lua.h>
 
 #include "archive.h"
+#include "game.h"
 #include "input.h"
 #include "lua.h"
 #include "net.h"
 #include "renderer.h"
-#include "voice.h"
-
 #include "soft_body.h" /* temp as long as no lua api */
+#include "voice.h"
 
 #ifdef SERVER
 #define ENTRY SAUSAGES_ENTRY_SERVER
@@ -25,7 +23,8 @@
 static lua_State *L;
 
 #ifndef SERVER
-static void resize_callback(GLFWwindow *window, const int width, const int height) {
+static void resize_callback(GLFWwindow *window, const int width,
+                            const int height) {
     struct render_context *r = glfwGetWindowUserPointer(window);
     r->width = width;
     r->height = height;
@@ -60,10 +59,11 @@ int main(void) {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
 
-    render_context = (struct render_context){.width = width, .height = height, .window = window};
+    render_context = (struct render_context){
+        .width = width, .height = height, .window = window};
     glViewport(0, 0, width, height);
 
-    printf("OpenGL %s\n", (const char *) glGetString(GL_VERSION));
+    printf("OpenGL %s\n", (const char *)glGetString(GL_VERSION));
 
     glfwSetFramebufferSizeCallback(window, resize_callback);
     glfwSetWindowUserPointer(window, &render_context);
@@ -72,6 +72,7 @@ int main(void) {
     renderer_init(&render_context);
     input_init(&input_context, window);
     net_set_voice_callback(voice_receive);
+    game_init();
 #endif
 
     L = lua_init(SAUSAGES_DATA, ENTRY);
@@ -96,9 +97,6 @@ int main(void) {
 #else
     glfwSwapInterval(0);
 
-    /* TODO: tmp */
-    struct ph_soft_body b = ph_soft_body_create_rect((struct vec2){0, 300}, (struct vec2){5, 10});
-
     double last_time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
         const double current_time = glfwGetTime();
@@ -110,31 +108,22 @@ int main(void) {
         lua_call_update(L, delta_time);
         voice_update();
 
-        /* TODO: tmp */ 
-        ph_soft_body_update(&b, delta_time);
-        if (input_key_down(&input_context, GLFW_KEY_F)) {
-            b.points[0].vel.y += 7.0f;
-        }
-
         input_clear_text(&input_context);
 
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-
-        /* TODO: tmp */ 
-        ph_soft_body_draw(&b);
 
         renderer_draw(&render_context);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
 
-        // vsync is disabled because it causes some weird behavior when the window is minimized, so cap the fps
-        // to 240 to avoid burning the cpu
+        // vsync is disabled because it causes some weird behavior when the
+        // window is minimized, so cap the fps to 240 to avoid burning the cpu
         const double frame_end = glfwGetTime();
         const double elapsed = frame_end - current_time;
         if (elapsed < 1.0 / 240.0) {
-            usleep((unsigned int) ((1.0 / 240.0 - elapsed) * 1e6));
+            usleep((unsigned int)((1.0 / 240.0 - elapsed) * 1e6));
         }
     }
 #endif

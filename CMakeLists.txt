@@ -60,6 +60,7 @@ set(CORE_SOURCES
         src/core/input.c
         src/core/voice.c
         src/core/soft_body.c
+        src/core/game.c
 )
 
 # Freetype2

@@ -4,6 +4,8 @@
 
 #include "cmath.h"
 #include <stdbool.h>
+
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
 /* everything in this header is static inline idk if thats how its better but yeah */

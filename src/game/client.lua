@@ -60,6 +60,8 @@ local image = core.load_texture("../test.png")
 font = core.load_font("../AdwaitaSans-Regular.ttf", 48, {32, 128})
 local_nickname = os.getenv("SAUSAGES_NICKNAME") or "Player"
 
+local softbody = 0
+
 function game_init()
     local ip = os.getenv("SAUSAGES_IP") or "127.0.0.1"
     local port = tonumber(os.getenv("SAUSAGES_PORT")) or 7777
@@ -69,6 +71,8 @@ function game_init()
 
     client = core.client.new(ip, port)
     core.print("connecting to " .. ip .. ":" .. port)
+
+    softbody = core.create_softbody({0, 400}, {5, 10})
 end
 
 local tick_rate = 1.0 / 120.0
@@ -77,7 +81,8 @@ local accumulator = 0.0
 function game_update(delta_time)
     core.voice.transmit(core.key_down(key.v))
     chat.update()
-
+    core.update_softbody(softbody, delta_time);
+    
     local msg = chat.poll_outgoing()
     while msg do
         client:send("chat:" .. msg)
@@ -133,7 +138,7 @@ function game_update(delta_time)
         return
     end
 
-    accumulator = accumulator + delta_time
+    ccumulator = accumulator + delta_time
     if accumulator > 0.2 then accumulator = 0.2 end
 
     while accumulator >= tick_rate do
@@ -142,10 +147,15 @@ function game_update(delta_time)
         if not chat.is_active() then
             if core.key_down(key.a) then
                 local_player.vx = local_player.vx - speed * tick_rate
+                core.softbody_apply_velocity(softbody, {-speed * tick_rate, 0})
             end
             if core.key_down(key.d) then
                 local_player.vx = local_player.vx + speed * tick_rate
+                core.softbody_apply_velocity(softbody, {speed * tick_rate, 0})
             end
+            if core.key_just_down(key.space) then
+                core.softbody_apply_velocity(softbody, {0, speed * 90 * tick_rate})
+            end 
         end
 
         local_player.vy = local_player.vy + gravity * tick_rate
@@ -177,6 +187,8 @@ function game_update(delta_time)
 
     core.push_circle({-300, 300}, 100, {1.0, 1.0, 1.0})
 
+    core.draw_softbody(softbody);
+    
     if core.button(font, "button", {0, 0}, {300, 100}) then
         core.print("YOO")
     end
@@ -186,4 +198,5 @@ end
 
 function game_quit()
     if client then client:close() end
+    core.destroy_softbody(softbody)
 end

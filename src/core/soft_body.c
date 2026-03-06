@@ -1,17 +1,19 @@
 
-#include "soft_body.h"
+// clang-format off
 #include "cmath.h"
-#include "renderer.h"
 #include "collision.h"
+#include "soft_body.h"
+#include "renderer.h"
+// clang-format off
 
 #include <math.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 /* high because of stubsteps */
 #define PH_GRAVITY_VEC ((struct vec2){0.0f, -900.0f})
 
-struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) {
+struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
+                                             struct vec2 size) {
     struct ph_soft_body b;
 
     int width = (int)size.x;
@@ -21,11 +23,12 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
     float rest_len = 30.0f;
 
     b.point_radius = 15.0f;
-    b.damping = 4.0f;
-    b.stiffness = 400.0f;
+    b.damping = 3.0f;
+    b.stiffness = 600.0f;
 
     b.points_count = (int)(size.x * size.y);
-    if (b.points_count < 2) return b;
+    if (b.points_count < 2)
+        return b;
 
     b.points = malloc(b.points_count * sizeof(struct ph_soft_body_point));
 
@@ -45,10 +48,11 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
         for (float y = -half_y; y < half_y; y += 1.0f) {
             b.points[point_idx] = (struct ph_soft_body_point){
                 .mass = 1,
-                .pos = {
-                    .x = pos.x + x * rest_len,
-                    .y = pos.y + y * rest_len,
-                },
+                .pos =
+                    {
+                        .x = pos.x + x * rest_len,
+                        .y = pos.y + y * rest_len,
+                    },
             };
 
             point_idx++;
@@ -101,20 +105,23 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
     return b;
 }
 
-static void ph_apply_spring_forces(struct ph_soft_body *b, struct ph_spring *s) {
+static void ph_apply_spring_forces(struct ph_soft_body *b,
+                                   struct ph_spring *s) {
     struct ph_soft_body_point *start = &b->points[s->start];
-    struct ph_soft_body_point *end   = &b->points[s->end];
+    struct ph_soft_body_point *end = &b->points[s->end];
 
     struct vec2 delta = math_vec2_subtract(end->pos, start->pos);
     float dist = math_vec2_length(delta);
-    if (dist < 0.0001f) return;
+    if (dist < 0.0001f)
+        return;
 
     struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
 
     float f_spring = (dist - s->rest_len) * b->stiffness;
     struct vec2 spring_f = math_vec2_scale(norm, f_spring);
 
-    float rel_vel_along = math_vec2_dot(math_vec2_subtract(end->vel, start->vel), norm);
+    float rel_vel_along =
+        math_vec2_dot(math_vec2_subtract(end->vel, start->vel), norm);
     struct vec2 damp_f = math_vec2_scale(norm, rel_vel_along * b->damping);
 
     struct vec2 total = math_vec2_add(spring_f, damp_f);
@@ -122,12 +129,14 @@ static void ph_apply_spring_forces(struct ph_soft_body *b, struct ph_spring *s) 
     end->force = math_vec2_subtract(end->force, total);
 }
 
-static void ph_soft_body_point_self_collision(struct ph_soft_body *b, int idx, struct ph_soft_body_point *p) {
+static void ph_soft_body_point_self_collision(struct ph_soft_body *b, int idx,
+                                              struct ph_soft_body_point *p) {
     for (int i = 0; i < b->points_count; i++) {
-        if (i == idx) continue;
+        if (i == idx)
+            continue;
 
         struct ph_soft_body_point *other = &b->points[i];
-        
+
         struct vec2 delta = math_vec2_subtract(p->pos, other->pos);
         float dist = math_vec2_length(delta);
 
@@ -138,12 +147,16 @@ static void ph_soft_body_point_self_collision(struct ph_soft_body *b, int idx, s
             float vel_along_norm = math_vec2_dot(rel_vel, norm);
 
             if (vel_along_norm < 0.0f) {
-                float restitution = 0.3f; 
-                float impulse = -(1.0f + restitution) * vel_along_norm / (1.0f / p->mass + 1.0f / other->mass);
+                float restitution = 0.3f;
+                float impulse = -(1.0f + restitution) * vel_along_norm /
+                                (1.0f / p->mass + 1.0f / other->mass);
 
                 struct vec2 impulse_vec = math_vec2_scale(norm, impulse);
-                p->vel = math_vec2_add(p->vel, math_vec2_scale(impulse_vec,  1.0f / p->mass));
-                other->vel = math_vec2_subtract(other->vel, math_vec2_scale(impulse_vec,  1.0f / other->mass));
+                p->vel = math_vec2_add(
+                    p->vel, math_vec2_scale(impulse_vec, 1.0f / p->mass));
+                other->vel = math_vec2_subtract(
+                    other->vel,
+                    math_vec2_scale(impulse_vec, 1.0f / other->mass));
             }
         }
     }
@@ -162,7 +175,8 @@ void ph_soft_body_update_substep(struct ph_soft_body *b, float dt) {
         p->vel = math_vec2_add(p->vel, math_vec2_scale(p->force, dt / p->mass));
         p->pos = math_vec2_add(p->pos, math_vec2_scale(p->vel, dt));
 
-        if (coll_check_point_rect(p->pos, (struct vec2){-400, -50}, (struct vec2){800, 100})) {
+        if (coll_check_point_rect(p->pos, (struct vec2){-400, -50},
+                                  (struct vec2){800, 100})) {
             p->pos.y = 50.0f;
             p->vel.y *= -0.3f;
         }
@@ -180,15 +194,22 @@ void ph_soft_body_update(struct ph_soft_body *b, float dt) {
     }
 }
 
+void ph_soft_body_apply_velocity(struct ph_soft_body *b, struct vec2 vel) {
+     for (int i = 0; i < b->points_count; i++) {
+         b->points[i].vel = math_vec2_add(b->points[i].vel, vel);
+     }   
+}
+
 void ph_soft_body_draw(struct ph_soft_body *b) {
     for (int i = 0; i < b->points_count; i++) {
-        renderer_push_circle(&render_context, b->points[i].pos, b->point_radius, (struct color3){1.0f, 0.0f, 0.0f});
+        renderer_push_circle(&render_context, b->points[i].pos, b->point_radius,
+                             (struct color3){1.0f, 0.0f, 0.0f});
     }
 }
 
 void ph_soft_body_destroy(struct ph_soft_body *b) {
-    if (b->points) free(b->points);
-    if (b->springs) free(b->springs);
+    if (b->points)
+        free(b->points);
+    if (b->springs)
+        free(b->springs);
 }
-
-
