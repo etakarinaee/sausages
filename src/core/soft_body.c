@@ -3,10 +3,11 @@
 #include "cmath.h"
 #include "renderer.h"
 
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-#define PH_GRAVITY_VEC ((struct vec2){0.0f, -9.81f})
+#define PH_GRAVITY_VEC ((struct vec2){0.0f, -100.0f})
 
 struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) {
     struct ph_soft_body b;
@@ -15,7 +16,8 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
     int height = (int)size.y;
     int stride = width;
 
-    b.rest_len = 30.0f;
+    float rest_len = 30.0f;
+
     b.damping = 0.9f;
     b.stiffness = 1.0f;
 
@@ -41,8 +43,8 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
             b.points[point_idx] = (struct ph_soft_body_point){
                 .mass = 1,
                 .pos = {
-                    .x = pos.x + x * b.rest_len,
-                    .y = pos.y + y * b.rest_len,
+                    .x = pos.x + x * rest_len,
+                    .y = pos.y + y * rest_len,
                 },
             };
 
@@ -61,6 +63,7 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
             b.springs[spring_idx++] = (struct ph_spring){
                 .start = i,
                 .end = i + stride,
+                .rest_len = rest_len,
             };
         }
 
@@ -69,6 +72,7 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
             b.springs[spring_idx++] = (struct ph_spring){
                 .start = i,
                 .end = i + 1,
+                .rest_len = rest_len,
             };
         }
 
@@ -77,6 +81,7 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
             b.springs[spring_idx++] = (struct ph_spring){
                 .start = i,
                 .end = i + stride + 1,
+                .rest_len = rest_len * M_SQRT2,
             };
         }
 
@@ -85,6 +90,7 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
             b.springs[spring_idx++] = (struct ph_spring){
                 .start = i,
                 .end = i - stride + 1,
+                .rest_len = rest_len * M_SQRT2,
             };
         }
     }
@@ -92,9 +98,56 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size) 
     return b;
 }
 
+static float ph_get_spring_force(struct ph_soft_body *b, struct ph_spring *s) {
+    struct ph_soft_body_point start = b->points[s->start];
+    struct ph_soft_body_point end  = b->points[s->end];
+
+    struct vec2 delta = math_vec2_subtract(end.pos, start.pos);
+    float dist = math_vec2_length(delta);
+
+    if (dist < 0.0001f) {
+        return 0.0f;
+    }
+
+    struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
+    float f_spring = (dist - s->rest_len) * b->stiffness;
+    float f_damp = math_vec2_dot(norm, math_vec2_subtract(end.vel, start.vel)) * b->damping;
+
+    return f_spring + f_damp;
+}
+
+static void ph_soft_body_update_point(struct ph_soft_body *b, int idx, struct ph_soft_body_point *p, float dt) {
+    p->force = (struct vec2){0, 0};
+
+    p->force = math_vec2_add(p->force, PH_GRAVITY_VEC);
+
+    /* TODO: optimize this by creation a spring children table in point or smth */
+    for (int i = 0; i < b->springs_count; i++) {
+        if (idx == b->springs[i].start || idx == b->springs[i].end) {
+            struct ph_spring *s = &b->springs[i];
+            float spring_force = ph_get_spring_force(b, s);
+
+            struct ph_soft_body_point start = b->points[s->start];
+            struct ph_soft_body_point end = b->points[s->end];
+
+            struct vec2 spring_f;
+            if (idx == b->springs[i].end) {
+                spring_f = math_vec2_scale(math_vec2_norm(math_vec2_subtract(start.pos, end.pos)), spring_force);
+            }
+            else {
+                spring_f = math_vec2_scale(math_vec2_norm(math_vec2_subtract(end.pos, start.pos)), spring_force);
+            }
+            p->force = math_vec2_add(p->force, spring_f);
+        }
+    }
+
+    p->vel = math_vec2_add(p->vel, math_vec2_scale(math_vec2_scale(p->force, dt), 1.0f / p->mass));
+    p->pos = math_vec2_add(p->pos, math_vec2_scale(p->vel, dt));
+}
+
 void ph_soft_body_update(struct ph_soft_body *b, float dt) {
     for (int i = 0; i < b->points_count; i++) {
-        ph_soft_body_update_point(&b->points[i], dt);
+        ph_soft_body_update_point(b, i, &b->points[i], dt);
     }
 }
 
@@ -109,22 +162,4 @@ void ph_soft_body_destroy(struct ph_soft_body *b) {
     if (b->springs) free(b->springs);
 }
 
-void ph_soft_body_update_point(struct ph_soft_body_point *p, float dt) {
-    p->force = (struct vec2){0, 0};
-
-    p->force = math_vec2_add(p->force, PH_GRAVITY_VEC);
-    p->vel = math_vec2_add(p->vel, math_vec2_scale(math_vec2_scale(p->force, dt), 1.0f / p->mass));
-    p->pos = math_vec2_add(p->pos, math_vec2_scale(p->vel, dt));
-}
-
-struct vec2 ph_get_spring_force(struct ph_soft_body *b, struct ph_spring *s) {
-    struct ph_soft_body_point start = b->points[s->start];
-    struct ph_soft_body_point end  = b->points[s->end];
-
-    struct vec2 norm = math_vec2_norm(math_vec2_subtract(end.pos, end.pos));
-    struct vec2 f_spring = math_vec2_scale(norm, (math_vec2_distance(end.pos, start.pos) - b->rest_len) * b->stiffness);
-    struct vec2 f_damp = math_vec2_scale(math_vec2_subtract(end.vel, start.vel), math_vec2_dot(end.pos, start.pos) * b->damping);
-
-    return math_vec2_add(f_spring, f_damp);
-}
 

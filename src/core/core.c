@@ -97,7 +97,7 @@ int main(void) {
     glfwSwapInterval(0);
 
     /* TODO: tmp */
-    struct ph_soft_body b = ph_soft_body_create_rect((struct vec2){0, 0}, (struct vec2){10, 2});
+    struct ph_soft_body b = ph_soft_body_create_rect((struct vec2){0, 0}, (struct vec2){5, 10});
 
     double last_time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
@@ -112,6 +112,9 @@ int main(void) {
 
         /* TODO: tmp */ 
         ph_soft_body_update(&b, delta_time);
+        if (input_key_down(&input_context, GLFW_KEY_F)) {
+            b.points[0].vel.y += 7.0f;
+        }
 
         input_clear_text(&input_context);
 

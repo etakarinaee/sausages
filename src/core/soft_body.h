@@ -15,6 +15,7 @@ struct ph_spring {
     /* handles to ph_soft_body_point */
     int start;
     int end;
+    float rest_len;
 };
 
 struct ph_soft_body {
@@ -24,7 +25,6 @@ struct ph_soft_body {
     struct ph_spring *springs;
 
     float stiffness;
-    float rest_len;
     float damping;
 };
 
@@ -32,8 +32,5 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size);
 void ph_soft_body_update(struct ph_soft_body *b, float dt);
 void ph_soft_body_draw(struct ph_soft_body *b);
 void ph_soft_body_destroy(struct ph_soft_body *b);
-
-void ph_soft_body_update_point(struct ph_soft_body_point *p, float dt);
-struct vec2 ph_get_spring_force(struct ph_soft_body *b, struct ph_spring *s);
 
 #endif // SOFT_BODY_H

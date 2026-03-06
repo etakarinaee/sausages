@@ -22,6 +22,11 @@ float math_vec2_length(struct vec2 v) {
 
 struct vec2 math_vec2_norm(struct vec2 v) {
     float len = math_vec2_length(v);
+
+    if (len == 0.0f) { /* if that even works with float precision */
+        return (struct vec2){0, 0};
+    }
+
     return (struct vec2){
         .x = v.x / len,
         .y = v.y / len,
@@ -38,7 +43,7 @@ float math_vec2_dot(struct vec2 a, struct vec2 b) {
 }
 
 float math_vec2_angle_cos(struct vec2 a, struct vec2 b) {
-    return math_vec2_dot(a, b) / math_vec2_length(a) * math_vec2_length(b);
+    return math_vec2_dot(a, b) / (math_vec2_length(a) * math_vec2_length(b));
 }
 
 float math_vec2_angle(struct vec2 a, struct vec2 b) {
