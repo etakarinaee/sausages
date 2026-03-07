@@ -14,7 +14,7 @@
 #define PH_GRAVITY_VEC ((struct vec2){0.0f, -900.0f})
 
 struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
-                                             struct vec2 size) {
+                                             struct vec2 size, struct color3 color) {
     struct ph_soft_body b;
 
     int width = (int)size.x;
@@ -134,7 +134,7 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
             indices[indices_idx++] = i + stride;
         }
     }     
-    b.mesh = renderer_create_mesh(vertices, b.points_count, indices, indices_count, (struct color3){1.0f, 0.0f, 0.0f});
+    b.mesh = renderer_create_mesh(vertices, b.points_count, indices, indices_count, color);
     return b;
 }
 
@@ -219,7 +219,7 @@ void ph_soft_body_update_substep(struct ph_soft_body *b, float dt) {
     }
 }
 
-void ph_soft_body_update(struct ph_soft_body *b, float dt) {
+void ph_soft_body_update(struct ph_soft_body *b, float dt, struct color3 color) {
     const int substeps = 8;
     const float sub_dt = dt / substeps;
     for (int s = 0; s < substeps; s++) {
@@ -234,15 +234,17 @@ void ph_soft_body_update(struct ph_soft_body *b, float dt) {
         vertices[i * 2 + 1] = b->points[i].pos.y;
     }
 
-    renderer_update_mesh(&b->mesh, vertices, b->points_count, (struct color3){1.0f, 0.0f, 0.0f});
+    renderer_update_mesh(&b->mesh, vertices, b->points_count, color);
 }
 
-static struct vec2 closest_point_on_line(struct vec2 start, struct vec2 end, struct vec2 p) {
+static struct vec2 closest_point_on_line(struct vec2 start, struct vec2 end, struct vec2 p, float *out_t) {
     struct vec2 edge_delta = math_vec2_subtract(end, start);
     struct vec2 delta = math_vec2_subtract(p, start);
 
     float t = math_vec2_dot(delta, edge_delta) / math_vec2_dot(edge_delta, edge_delta);
     t = math_clamp(t, 0.0f, 1.0f);
+
+    if (out_t) *out_t = t;
 
     return math_vec2_add(start, math_vec2_scale(edge_delta, t));
 }
@@ -253,9 +255,12 @@ void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b) {
         if (!a_p->is_outer) continue;
                 
         struct vec2 edge_start;
+        int edge_start_idx;
         struct vec2 edge_end;
+        int edge_end_idx;
         int edge_point_count = 0;
         struct vec2 closest_point;
+        float t = 0.0f;
         bool first_time = true;
 
         int intersections = 0;
@@ -264,7 +269,10 @@ void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b) {
             struct ph_soft_body_point *p = &b->points[j];
             if (p->is_outer) {
                 struct vec2 *edge_p = edge_point_count == 0 ? &edge_start : &edge_end;
+                int *edge_idx = edge_point_count == 0 ? &edge_start_idx : &edge_end_idx;
+                
                 *edge_p = p->pos;
+                *edge_idx = j;
                 edge_point_count++;    
             }
 
@@ -280,9 +288,11 @@ void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b) {
                     intersections++;
                 }
 
-                struct vec2 p_on_line = closest_point_on_line(edge_start, edge_end, a_p->pos);
+                float out_t = 0.0f;
+                struct vec2 p_on_line = closest_point_on_line(edge_start, edge_end, a_p->pos, &out_t);
                 if (first_time || math_vec2_distance(a_p->pos, closest_point) > math_vec2_distance(a_p->pos, p_on_line)) {
                     closest_point = p_on_line;
+                    t = out_t;
                 }
 
                 first_time = false;
@@ -291,6 +301,12 @@ void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b) {
 
         if (intersections % 2 == 1) {
             struct vec2 push = math_vec2_subtract(closest_point, a_p->pos);
+            struct vec2 push_a = math_vec2_scale(push, t);
+            struct vec2 push_end = math_vec2_scale(push, -t);
+            struct vec2 push_start = math_vec2_scale(push, 1 - t);
+            a_p->pos = math_vec2_add(a_p->pos, push_a);
+            b->points[edge_end_idx].pos = math_vec2_add(b->points[edge_end_idx].pos, push_end);
+            b->points[edge_start_idx].pos = math_vec2_add(b->points[edge_start_idx].pos, push_start);
         }
     }
 }

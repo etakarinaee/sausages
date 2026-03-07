@@ -73,8 +73,8 @@ function game_init()
     client = core.client.new(ip, port)
     core.print("connecting to " .. ip .. ":" .. port)
 
-    softbody = core.create_softbody({310, 400}, {10, 10})
-    softbody_two = core.create_softbody({-100, 400}, {5, 10})
+    softbody = core.create_softbody({310, 400}, {10, 10}, {0.8, 0.3, 0.0})
+    softbody_two = core.create_softbody({-100, 400}, {5, 10}, {0.1, 0.0, 1.0})
 end
 
 local tick_rate = 1.0 / 120.0
@@ -83,8 +83,8 @@ local accumulator = 0.0
 function game_update(delta_time)
     core.voice.transmit(core.key_down(key.v))
     chat.update()
-    core.update_softbody(softbody, delta_time)
-    core.update_softbody(softbody_two, delta_time)    
+    core.update_softbody(softbody, delta_time, {0.8, 0.3, 0.0})
+    core.update_softbody(softbody_two, delta_time, {0.1, 0.0, 1.0})    
     core.softbody_check_coll(softbody, softbody_two)
     local msg = chat.poll_outgoing()
     while msg do

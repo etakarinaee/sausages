@@ -285,10 +285,11 @@ static int l_load_font(lua_State *L) {
 static int l_create_softbody(lua_State *L) {
     const struct vec2 pos = check_vec2(L, 1);
     const struct vec2 size = check_vec2(L, 2);
+    const struct color3 color = check_color3(L, 3);
 
     int handle = game_context.soft_bodies_index;
     game_context.soft_bodies[game_context.soft_bodies_index++] =
-        ph_soft_body_create_rect(pos, size);
+        ph_soft_body_create_rect(pos, size, color);
     lua_pushinteger(L, handle);
     return 1;
 }
@@ -296,8 +297,9 @@ static int l_create_softbody(lua_State *L) {
 static int l_update_softbody(lua_State *L) {
     const int handle = luaL_checkinteger(L, 1);
     const float dt = luaL_checknumber(L, 2);
+    const struct color3 color = check_color3(L, 3);
 
-    ph_soft_body_update(&game_context.soft_bodies[handle], dt);
+    ph_soft_body_update(&game_context.soft_bodies[handle], dt, color);
 
     return 0;
 }
