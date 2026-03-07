@@ -39,11 +39,11 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
     int springs_diagonal = (width - 1) * (height - 1) * 2;
 
     b.springs_count = springs_horizontal + springs_vertical + springs_diagonal;
-    b.springs = malloc(b.springs_count * sizeof(struct ph_spring)); /* quote cheescake: i love eding */
-
+    b.springs = malloc(b.springs_count * sizeof(struct ph_spring));
+    
     /* i know i know very reliable increase here */
     b.edges_count = 2 * (width - 1) + 2 * (height -1);
-    b.edges = malloc(b.edges_count * sizeof(struct ph_edge));
+    b.edges = malloc(b.edges_count * sizeof(struct ph_edge));  /* quote cheescake: i love edging */
     int edge_idx = 0;
 
     float half_x = size.x * 0.5f;
@@ -241,7 +241,6 @@ void ph_soft_body_update(struct ph_soft_body *b, float dt, struct color3 color) 
         ph_soft_body_update_substep(b, sub_dt);
     }
 
-    
     float vertices[b->points_count * 2];
 
     for (int i = 0; i < b->points_count; i++) {
@@ -279,9 +278,6 @@ void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b) {
             struct ph_soft_body_point *start = &b->points[edge->start];
             struct ph_soft_body_point *end = &b->points[edge->end];
             
-            struct vec2 out_p = a_p->pos;
-            out_p.x += b->size.x + 2;  /* +2 for extra safety */
-
             if ((start->pos.y > a_p->pos.y) != (end->pos.y > a_p->pos.y) &&
                 a_p->pos.x < (end->pos.x - start->pos.x) * (a_p->pos.y - start->pos.y) / (end->pos.y - start->pos.y) + start->pos.x) {
                 intersections++;

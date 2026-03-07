@@ -83,9 +83,11 @@ local accumulator = 0.0
 function game_update(delta_time)
     core.voice.transmit(core.key_down(key.v))
     chat.update()
+
     core.update_softbody(softbody, delta_time, {0.8, 0.3, 0.0})
     core.update_softbody(softbody_two, delta_time, {0.1, 0.0, 1.0})    
     core.softbody_check_coll(softbody, softbody_two)
+
     local msg = chat.poll_outgoing()
     while msg do
         client:send("chat:" .. msg)
