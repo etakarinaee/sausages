@@ -57,10 +57,11 @@ end
 
 local image = core.load_texture("../test.png")
 
-font = core.load_font("../AdwaitaSans-Regular.ttf", 48, {32, 128})
+local font = core.load_font("../AdwaitaSans-Regular.ttf", 48, {32, 128})
 local_nickname = os.getenv("SAUSAGES_NICKNAME") or "Player"
 
 local softbody = 0
+local softbody_two = 0;
 
 function game_init()
     local ip = os.getenv("SAUSAGES_IP") or "127.0.0.1"
@@ -72,7 +73,8 @@ function game_init()
     client = core.client.new(ip, port)
     core.print("connecting to " .. ip .. ":" .. port)
 
-    softbody = core.create_softbody({0, 400}, {5, 10})
+    softbody = core.create_softbody({310, 400}, {10, 10})
+    softbody_two = core.create_softbody({-100, 400}, {5, 10})
 end
 
 local tick_rate = 1.0 / 120.0
@@ -81,8 +83,9 @@ local accumulator = 0.0
 function game_update(delta_time)
     core.voice.transmit(core.key_down(key.v))
     chat.update()
-    core.update_softbody(softbody, delta_time);
-    
+    core.update_softbody(softbody, delta_time)
+    core.update_softbody(softbody_two, delta_time)    
+    core.softbody_check_coll(softbody, softbody_two)
     local msg = chat.poll_outgoing()
     while msg do
         client:send("chat:" .. msg)
@@ -147,14 +150,14 @@ function game_update(delta_time)
         if not chat.is_active() then
             if core.key_down(key.a) then
                 local_player.vx = local_player.vx - speed * tick_rate
-                core.softbody_apply_velocity(softbody, {-speed * tick_rate, 0})
+                core.softbody_apply_velocity(softbody_two, {-speed * tick_rate, 0})
             end
             if core.key_down(key.d) then
                 local_player.vx = local_player.vx + speed * tick_rate
-                core.softbody_apply_velocity(softbody, {speed * tick_rate, 0})
+                core.softbody_apply_velocity(softbody_two, {speed * tick_rate, 0})
             end
             if core.key_just_down(key.space) then
-                core.softbody_apply_velocity(softbody, {0, speed * 90 * tick_rate})
+                core.softbody_apply_velocity(softbody_two, {0, speed * 90 * tick_rate})
             end 
         end
 
@@ -185,9 +188,8 @@ function game_update(delta_time)
         core.push_text_ex(font, player.nickname, {player.x, player.y + 10}, 25, {1.0, 1.0, 1.0}, core.anchor.center)
     end
 
-    core.push_circle({-300, 300}, 100, {1.0, 1.0, 1.0})
-
-    core.draw_softbody(softbody);
+    core.draw_softbody(softbody)
+    core.draw_softbody(softbody_two)
 
     if core.button(font, "button", {0, 0}, {300, 100}) then
         core.print("YOO")

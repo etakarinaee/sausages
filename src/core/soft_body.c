@@ -8,6 +8,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 /* high because of stubsteps */
 #define PH_GRAVITY_VEC ((struct vec2){0.0f, -900.0f})
@@ -25,6 +26,7 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
     b.point_radius = 15.0f;
     b.damping = 3.0f;
     b.stiffness = 600.0f;
+    b.size = size;
 
     b.points_count = (int)(size.x * size.y);
     if (b.points_count < 2)
@@ -55,6 +57,11 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
                     },
             };
 
+            if ((int)x == (int)-half_x || (int)x == (int)half_x - 1 ||
+                (int)y == (int)-half_y || (int)y == (int)half_y -1) {
+                 b.points[point_idx].is_outer = true;               
+            }
+            
             point_idx++;
         }
     }
@@ -228,6 +235,64 @@ void ph_soft_body_update(struct ph_soft_body *b, float dt) {
     }
 
     renderer_update_mesh(&b->mesh, vertices, b->points_count, (struct color3){1.0f, 0.0f, 0.0f});
+}
+
+static struct vec2 closest_point_on_line(struct vec2 start, struct vec2 end, struct vec2 p) {
+    struct vec2 edge_delta = math_vec2_subtract(end, start);
+    struct vec2 delta = math_vec2_subtract(p, start);
+
+    float t = math_vec2_dot(delta, edge_delta) / math_vec2_dot(edge_delta, edge_delta);
+    t = math_clamp(t, 0.0f, 1.0f);
+
+    return math_vec2_add(start, math_vec2_scale(edge_delta, t));
+}
+
+void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b) {
+    for (int i = 0; i < a->points_count; i++) {
+        struct ph_soft_body_point *a_p = &a->points[i];
+        if (!a_p->is_outer) continue;
+                
+        struct vec2 edge_start;
+        struct vec2 edge_end;
+        int edge_point_count = 0;
+        struct vec2 closest_point;
+        bool first_time = true;
+
+        int intersections = 0;
+
+        for (int j = 0; j < b->points_count; j++) {
+            struct ph_soft_body_point *p = &b->points[j];
+            if (p->is_outer) {
+                struct vec2 *edge_p = edge_point_count == 0 ? &edge_start : &edge_end;
+                *edge_p = p->pos;
+                edge_point_count++;    
+            }
+
+            /* found edge */
+            if (edge_point_count == 2) {
+                edge_point_count = 0;
+
+                struct vec2 out_p = a_p->pos;
+                out_p.x += b->size.x + 2;  /* +2 for extra safety */
+
+                if ((edge_start.y > a_p->pos.y) != (edge_end.y > a_p->pos.y) &&
+                    a_p->pos.x < (edge_end.x - edge_start.x) * (a_p->pos.y - edge_start.y) / (edge_end.y - edge_start.y) + edge_start.x) {
+                    intersections++;
+                }
+
+                struct vec2 p_on_line = closest_point_on_line(edge_start, edge_end, a_p->pos);
+                if (first_time || math_vec2_distance(a_p->pos, closest_point) > math_vec2_distance(a_p->pos, p_on_line)) {
+                    closest_point = p_on_line;
+                }
+
+                first_time = false;
+            }
+        }
+
+        if (intersections % 2 == 1) {
+            struct vec2 push = math_vec2_subtract(closest_point, a_p->pos);
+        }
+    }
 }
 
 void ph_soft_body_apply_velocity(struct ph_soft_body *b, struct vec2 vel) {

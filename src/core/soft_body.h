@@ -10,6 +10,7 @@ struct ph_soft_body_point {
     struct vec2 vel;
     struct vec2 force;
     float mass;
+    bool is_outer; /* on the edge of the polygon */
 };
 
 struct ph_spring {
@@ -29,13 +30,13 @@ struct ph_soft_body {
     float stiffness;
     float damping;
 
-    struct mesh mesh;
-    struct vec2 pos;
     struct vec2 size;
+    struct mesh mesh;
 };
 
 struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size);
 void ph_soft_body_update(struct ph_soft_body *b, float dt);
+void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b);
 void ph_soft_body_apply_velocity(struct ph_soft_body *b, struct vec2 vel);
 void ph_soft_body_draw(struct ph_soft_body *b);
 void ph_soft_body_destroy(struct ph_soft_body *b);

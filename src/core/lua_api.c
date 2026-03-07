@@ -311,6 +311,18 @@ static int l_softbody_apply_velocity(lua_State *L) {
     return 0;
 }
 
+static int l_softbody_check_coll(lua_State *L) {
+    int handle_a = luaL_checkinteger(L, 1);
+    int handle_b = luaL_checkinteger(L, 2);
+
+    struct ph_soft_body *a = &game_context.soft_bodies[handle_a];
+    struct ph_soft_body *b = &game_context.soft_bodies[handle_b];
+
+    ph_soft_body_check_coll(a, b);
+
+    return 0;
+}
+
 static int l_draw_softbody(lua_State *L) {
     const int handle = luaL_checknumber(L, 1);
 
@@ -737,6 +749,7 @@ static const luaL_Reg api[] = {
     {"load_font", l_load_font},
     {"create_softbody", l_create_softbody},
     {"update_softbody", l_update_softbody},
+    {"softbody_check_coll", l_softbody_check_coll},
     {"softbody_apply_velocity", l_softbody_apply_velocity},
     {"draw_softbody", l_draw_softbody},
     {"destroy_softbody", l_destroy_softbody},
