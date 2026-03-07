@@ -197,6 +197,9 @@ function game_update(delta_time)
     core.draw_softbody(softbody_two)
     core.draw_softbody(softbody_ground)
 
+    local pos = core.softbody_get_pos(softbody_two)
+    core.push_circle({pos.x, pos.y}, 15, {1.0, 1.0, 1.0})
+
     if core.button(font, "button", {0, 0}, {300, 100}) then
         core.print("YOO")
     end

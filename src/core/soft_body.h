@@ -48,4 +48,6 @@ void ph_soft_body_apply_velocity(struct ph_soft_body *b, struct vec2 vel);
 void ph_soft_body_draw(struct ph_soft_body *b);
 void ph_soft_body_destroy(struct ph_soft_body *b);
 
+struct vec2 ph_soft_body_get_pos(struct ph_soft_body *b);
+
 #endif // SOFT_BODY_H

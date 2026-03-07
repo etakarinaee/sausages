@@ -356,3 +356,18 @@ void ph_soft_body_destroy(struct ph_soft_body *b) {
     if (b->edges)
         free(b->edges);
 }
+
+struct vec2 ph_soft_body_get_pos(struct ph_soft_body *b) {
+    float x = 0.0f;
+    float y = 0.0f;
+
+    for (int i = 0; i < b->points_count; i++) {
+        x += b->points[i].pos.x;
+        y += b->points[i].pos.y;
+    }
+
+    x /= b->points_count;
+    y /= b->points_count;
+
+    return (struct vec2){x, y};
+}

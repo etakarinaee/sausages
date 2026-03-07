@@ -354,6 +354,20 @@ static int l_destroy_softbody(lua_State *L) {
     return 0;
 }
 
+static int l_softbody_get_pos(lua_State *L) {
+    const int handle = luaL_checknumber(L, 1);
+    struct vec2 pos = ph_soft_body_get_pos(&game_context.soft_bodies[handle]);
+
+    lua_newtable(L);
+    lua_pushinteger(L, pos.x);
+    lua_setfield(L, -2, "x");
+
+    lua_pushinteger(L, pos.y);
+    lua_setfield(L, -2, "y");
+
+    return 1;
+}
+
 ////////////////
 /* ui */
 ////////////////
@@ -768,6 +782,7 @@ static const luaL_Reg api[] = {
     {"softbody_apply_velocity", l_softbody_apply_velocity},
     {"draw_softbody", l_draw_softbody},
     {"destroy_softbody", l_destroy_softbody},
+    {"softbody_get_pos", l_softbody_get_pos},
     {"get_screen_dimensions", l_get_screen_dimensions},
 
     /* ui */
