@@ -62,6 +62,7 @@ local_nickname = os.getenv("SAUSAGES_NICKNAME") or "Player"
 
 local softbody = 0
 local softbody_two = 0;
+local softbody_ground = 0;
 
 function game_init()
     local ip = os.getenv("SAUSAGES_IP") or "127.0.0.1"
@@ -75,6 +76,7 @@ function game_init()
 
     softbody = core.create_softbody({310, 400}, {10, 10}, {0.8, 0.3, 0.0})
     softbody_two = core.create_softbody({-100, 400}, {5, 10}, {0.1, 0.0, 1.0})
+    softbody_ground = core.create_softbody({0, 0}, {25, 4}, {0.3, 0.7, 0.3})
 end
 
 local tick_rate = 1.0 / 120.0
@@ -85,8 +87,9 @@ function game_update(delta_time)
     chat.update()
 
     core.update_softbody(softbody, delta_time, {0.8, 0.3, 0.0})
-    core.update_softbody(softbody_two, delta_time, {0.1, 0.0, 1.0})    
-    core.softbody_check_coll(softbody, softbody_two)
+    core.update_softbody(softbody_two, delta_time, {0.1, 0.0, 1.0})
+    core.update_softbody(softbody_ground, delta_time, {0.3, 0.7, 0.3}) 
+    core.softbody_check_coll({softbody, softbody_two, softbody_ground})
 
     local msg = chat.poll_outgoing()
     while msg do
@@ -192,6 +195,7 @@ function game_update(delta_time)
 
     core.draw_softbody(softbody)
     core.draw_softbody(softbody_two)
+    core.draw_softbody(softbody_ground)
 
     if core.button(font, "button", {0, 0}, {300, 100}) then
         core.print("YOO")

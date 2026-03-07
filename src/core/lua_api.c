@@ -314,13 +314,26 @@ static int l_softbody_apply_velocity(lua_State *L) {
 }
 
 static int l_softbody_check_coll(lua_State *L) {
-    int handle_a = luaL_checkinteger(L, 1);
-    int handle_b = luaL_checkinteger(L, 2);
+    luaL_checktype(L, 1, LUA_TTABLE);
+    size_t len = lua_objlen(L, 1);
 
-    struct ph_soft_body *a = &game_context.soft_bodies[handle_a];
-    struct ph_soft_body *b = &game_context.soft_bodies[handle_b];
+    int handles[len];
+    for (size_t i = 0; i < len; i++) {
+        lua_rawgeti(L, 1, i + 1);
+        handles[i] = luaL_checkinteger(L, -1);
+        lua_pop(L, 1);
+    }
 
-    ph_soft_body_check_coll(a, b);
+    for (size_t i = 0; i < len; i++) {
+        int a = handles[i];
+        for (size_t j = 0; j < len; j++) {
+            if (i == j)
+                continue;
+            int b = handles[j];
+            ph_soft_body_check_coll(&game_context.soft_bodies[a],
+                                    &game_context.soft_bodies[b]);
+        }
+    }
 
     return 0;
 }
