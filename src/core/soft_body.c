@@ -39,7 +39,12 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
     int springs_diagonal = (width - 1) * (height - 1) * 2;
 
     b.springs_count = springs_horizontal + springs_vertical + springs_diagonal;
-    b.springs = malloc(b.springs_count * sizeof(struct ph_spring));
+    b.springs = malloc(b.springs_count * sizeof(struct ph_spring)); /* quote cheescake: i love eding */
+
+    /* i know i know very reliable increase here */
+    b.edges_count = 2 * (width - 1) + 2 * (height -1);
+    b.edges = malloc(b.edges_count * sizeof(struct ph_edge));
+    int edge_idx = 0;
 
     float half_x = size.x * 0.5f;
     float half_y = size.y * 0.5f;
@@ -56,12 +61,7 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
                         .y = pos.y + y * rest_len,
                     },
             };
-
-            if ((int)x == (int)-half_x || (int)x == (int)half_x - 1 ||
-                (int)y == (int)-half_y || (int)y == (int)half_y -1) {
-                 b.points[point_idx].is_outer = true;               
-            }
-            
+                 
             point_idx++;
         }
     }
@@ -71,6 +71,7 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
     /* spring init */
     for (int i = 0; i < b.points_count; i++) {
         int x = i % width;
+        int y = i / width;
 
         /* vertical down */
         if (i + stride < b.points_count) {
@@ -107,6 +108,20 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
                 .rest_len = rest_len * M_SQRT2,
             };
         }
+
+        /* edges */
+        if ((y == 0 || y == height - 1) && x < width - 1) {
+            b.edges[edge_idx++] = (struct ph_edge){
+                 .start = i,
+                 .end = i + 1,   
+            };
+        }
+        if ((x == 0 || x == width - 1) && i + stride < b.points_count) {
+            b.edges[edge_idx++] = (struct ph_edge){
+                 .start = i,
+                 .end = i + stride,   
+            };
+        }
     }
 
     float vertices[b.points_count * 2];
@@ -133,7 +148,7 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos,
             indices[indices_idx++] = i + stride + 1;
             indices[indices_idx++] = i + stride;
         }
-    }     
+    }
     b.mesh = renderer_create_mesh(vertices, b.points_count, indices, indices_count, color);
     return b;
 }
@@ -251,55 +266,43 @@ static struct vec2 closest_point_on_line(struct vec2 start, struct vec2 end, str
 
 void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b) {
     for (int i = 0; i < a->points_count; i++) {
-        struct ph_soft_body_point *a_p = &a->points[i];
-        if (!a_p->is_outer) continue;
-                
-        struct vec2 edge_start;
-        int edge_start_idx;
-        struct vec2 edge_end;
-        int edge_end_idx;
-        int edge_point_count = 0;
+        struct ph_soft_body_point *a_p = &a->points[i];       
         struct vec2 closest_point;
         float t = 0.0f;
         bool first_time = true;
+        int edge_idx = -1;
 
         int intersections = 0;
 
-        for (int j = 0; j < b->points_count; j++) {
-            struct ph_soft_body_point *p = &b->points[j];
-            if (p->is_outer) {
-                struct vec2 *edge_p = edge_point_count == 0 ? &edge_start : &edge_end;
-                int *edge_idx = edge_point_count == 0 ? &edge_start_idx : &edge_end_idx;
-                
-                *edge_p = p->pos;
-                *edge_idx = j;
-                edge_point_count++;    
+        for (int j = 0; j < b->edges_count; j++) {
+            struct ph_edge *edge = &b->edges[j];
+            struct ph_soft_body_point *start = &b->points[edge->start];
+            struct ph_soft_body_point *end = &b->points[edge->end];
+            
+            struct vec2 out_p = a_p->pos;
+            out_p.x += b->size.x + 2;  /* +2 for extra safety */
+
+            if ((start->pos.y > a_p->pos.y) != (end->pos.y > a_p->pos.y) &&
+                a_p->pos.x < (end->pos.x - start->pos.x) * (a_p->pos.y - start->pos.y) / (end->pos.y - start->pos.y) + start->pos.x) {
+                intersections++;
             }
 
-            /* found edge */
-            if (edge_point_count == 2) {
-                edge_point_count = 0;
-
-                struct vec2 out_p = a_p->pos;
-                out_p.x += b->size.x + 2;  /* +2 for extra safety */
-
-                if ((edge_start.y > a_p->pos.y) != (edge_end.y > a_p->pos.y) &&
-                    a_p->pos.x < (edge_end.x - edge_start.x) * (a_p->pos.y - edge_start.y) / (edge_end.y - edge_start.y) + edge_start.x) {
-                    intersections++;
-                }
-
-                float out_t = 0.0f;
-                struct vec2 p_on_line = closest_point_on_line(edge_start, edge_end, a_p->pos, &out_t);
-                if (first_time || math_vec2_distance(a_p->pos, closest_point) > math_vec2_distance(a_p->pos, p_on_line)) {
-                    closest_point = p_on_line;
-                    t = out_t;
-                }
-
-                first_time = false;
+            float out_t = 0.0f;
+            struct vec2 p_on_line = closest_point_on_line(start->pos, end->pos, a_p->pos, &out_t);
+            if (first_time || math_vec2_distance(a_p->pos, closest_point) > math_vec2_distance(a_p->pos, p_on_line)) {
+                closest_point = p_on_line;
+                t = out_t;
+                edge_idx = j;
             }
+
+            first_time = false;   
         }
 
         if (intersections % 2 == 1) {
+            struct ph_edge *edge = &b->edges[edge_idx];
+            struct ph_soft_body_point *start = &b->points[edge->start];
+            struct ph_soft_body_point *end = &b->points[edge->end];
+            
             struct vec2 push = math_vec2_subtract(closest_point, a_p->pos);
             struct vec2 normal = math_vec2_norm(push);
             const float e = 1.0f;
@@ -308,8 +311,8 @@ void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b) {
             struct vec2 v_tangent = math_vec2_subtract(a_p->vel, v_normal);
             
             a_p->pos = math_vec2_add(a_p->pos, push);
-            b->points[edge_end_idx].pos = math_vec2_subtract(b->points[edge_end_idx].pos, math_vec2_scale(push, t));
-            b->points[edge_start_idx].pos = math_vec2_add(b->points[edge_start_idx].pos,  math_vec2_scale(push, 1.0f - t));
+            end->pos = math_vec2_subtract(end->pos, math_vec2_scale(push, t));
+            start->pos = math_vec2_add(start->pos,  math_vec2_scale(push, 1.0f - t));
 
             struct vec2 v_new = math_vec2_subtract(v_tangent, math_vec2_scale(v_normal, e));
             a_p->vel = v_new;
@@ -317,8 +320,8 @@ void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b) {
             struct vec2 v_edge = math_vec2_scale(push, 1 - t);
             a_p->vel = math_vec2_subtract(a_p->vel, v_edge);
             
-            b->points[edge_start_idx].vel = math_vec2_add(b->points[edge_start_idx].vel, math_vec2_scale(v_edge, 1.0f - t));
-            b->points[edge_end_idx].vel = math_vec2_add(b->points[edge_end_idx].vel, math_vec2_scale(v_edge, t));
+            start->vel = math_vec2_add(start->vel, math_vec2_scale(v_edge, 1.0f - t));
+            end->vel = math_vec2_add(end->vel, math_vec2_scale(v_edge, t));
          }
     }
 }
@@ -338,4 +341,6 @@ void ph_soft_body_destroy(struct ph_soft_body *b) {
         free(b->points);
     if (b->springs)
         free(b->springs);
+    if (b->edges)
+        free(b->edges);
 }

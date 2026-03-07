@@ -10,7 +10,6 @@ struct ph_soft_body_point {
     struct vec2 vel;
     struct vec2 force;
     float mass;
-    bool is_outer; /* on the edge of the polygon */
 };
 
 struct ph_spring {
@@ -20,11 +19,18 @@ struct ph_spring {
     float rest_len;
 };
 
+struct ph_edge {
+    int start;
+    int end;
+};
+
 struct ph_soft_body {
     int points_count;
     int springs_count;
     struct ph_soft_body_point *points;
     struct ph_spring *springs;
+    struct ph_edge *edges;
+    int edges_count;
 
     float point_radius;
     float stiffness;
