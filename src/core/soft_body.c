@@ -301,13 +301,25 @@ void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b) {
 
         if (intersections % 2 == 1) {
             struct vec2 push = math_vec2_subtract(closest_point, a_p->pos);
-            struct vec2 push_a = math_vec2_scale(push, t);
-            struct vec2 push_end = math_vec2_scale(push, -t);
-            struct vec2 push_start = math_vec2_scale(push, 1 - t);
-            a_p->pos = math_vec2_add(a_p->pos, push_a);
-            b->points[edge_end_idx].pos = math_vec2_add(b->points[edge_end_idx].pos, push_end);
-            b->points[edge_start_idx].pos = math_vec2_add(b->points[edge_start_idx].pos, push_start);
-        }
+            struct vec2 normal = math_vec2_norm(push);
+            const float e = 1.0f;
+            float vn = math_vec2_dot(a_p->vel, normal);
+            struct vec2 v_normal = math_vec2_scale(normal, vn);
+            struct vec2 v_tangent = math_vec2_subtract(a_p->vel, v_normal);
+            
+            a_p->pos = math_vec2_add(a_p->pos, push);
+            b->points[edge_end_idx].pos = math_vec2_subtract(b->points[edge_end_idx].pos, math_vec2_scale(push, t));
+            b->points[edge_start_idx].pos = math_vec2_add(b->points[edge_start_idx].pos,  math_vec2_scale(push, 1.0f - t));
+
+            struct vec2 v_new = math_vec2_subtract(v_tangent, math_vec2_scale(v_normal, e));
+            a_p->vel = v_new;
+
+            struct vec2 v_edge = math_vec2_scale(push, 1 - t);
+            a_p->vel = math_vec2_subtract(a_p->vel, v_edge);
+            
+            b->points[edge_start_idx].vel = math_vec2_add(b->points[edge_start_idx].vel, math_vec2_scale(v_edge, 1.0f - t));
+            b->points[edge_end_idx].vel = math_vec2_add(b->points[edge_end_idx].vel, math_vec2_scale(v_edge, t));
+         }
     }
 }
 
