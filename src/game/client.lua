@@ -86,6 +86,8 @@ function game_update(delta_time)
     core.voice.transmit(core.key_down(key.v))
     chat.update()
 
+    core.softbody_apply_force(softbody, {0, -900})
+    core.softbody_apply_force(softbody_two, {0, -900})
     core.update_softbody(softbody, delta_time, {0.8, 0.3, 0.0})
     core.update_softbody(softbody_two, delta_time, {0.1, 0.0, 1.0})
     core.update_softbody(softbody_ground, delta_time, {0.3, 0.7, 0.3}) 
@@ -152,17 +154,24 @@ function game_update(delta_time)
     while accumulator >= tick_rate do
         accumulator = accumulator - tick_rate
 
+        if core.mouse_down(mouse.left) then
+            pos = core.mouse_position()
+            pos_world = core.screen_to_world({pos.x, pos.y})
+            core.print("Pos: " .. tostring(pos_world[1]) .. " " .. tostring(pos_world[2]))
+            core.softbody_set_pos(softbody_two, pos_world)
+        end
+
         if not chat.is_active() then
             if core.key_down(key.a) then
                 local_player.vx = local_player.vx - speed * tick_rate
-                core.softbody_apply_velocity(softbody_two, {-speed * tick_rate, 0})
+                core.softbody_apply_force(softbody_two, {-speed * 90 * tick_rate, 0})
             end
             if core.key_down(key.d) then
                 local_player.vx = local_player.vx + speed * tick_rate
-                core.softbody_apply_velocity(softbody_two, {speed * tick_rate, 0})
+                core.softbody_apply_force(softbody_two, {speed * 90 * tick_rate, 0})
             end
             if core.key_just_down(key.space) then
-                core.softbody_apply_velocity(softbody_two, {0, speed * 90 * tick_rate})
+                core.softbody_apply_force(softbody_two, {0, speed * 1500 * tick_rate})
             end 
         end
 

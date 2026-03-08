@@ -17,6 +17,11 @@ struct ph_soft_body_point {
     float mass;
 };
 
+struct ph_soft_body_frame_point {
+    struct vec2 pos;
+    struct vec2 vel;
+};
+
 struct ph_spring {
     /* handles to ph_soft_body_point */
     int start;
@@ -37,11 +42,18 @@ struct ph_soft_body {
     struct ph_soft_body_point *points;
     struct ph_spring *springs;
     struct ph_edge *edges;
-    struct vec2 *frame_points;
+    struct ph_soft_body_frame_point *frame_points;
 
     float point_radius;
     float stiffness;
     float damping;
+
+    struct vec2 frame_pos;
+    struct vec2 pos;
+    bool update_frame_pos; /* true when position need to be pulled again */
+    bool update_pos;
+
+    struct vec2 force; /* acumalive outside force acting on the hole object */
 
     struct vec2 size;
     struct mesh mesh;
@@ -52,10 +64,11 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size,
 void ph_soft_body_update(struct ph_soft_body *b, float dt, struct color3 color);
 void ph_soft_body_check_coll(struct ph_soft_body *a, struct ph_soft_body *b);
 void ph_soft_body_apply_velocity(struct ph_soft_body *b, struct vec2 vel);
+void ph_soft_body_apply_force(struct ph_soft_body *b, struct vec2 force);
 void ph_soft_body_draw(struct ph_soft_body *b);
 void ph_soft_body_destroy(struct ph_soft_body *b);
 
-struct vec2 ph_soft_body_get_pos(struct ph_soft_body *b, int type,
-                                 float *angle);
+struct vec2 ph_soft_body_get_pos(struct ph_soft_body *b, int type);
+void ph_soft_body_set_pos(struct ph_soft_body *b, struct vec2 pos, int type);
 
 #endif // SOFT_BODY_H

@@ -3,6 +3,7 @@
 #include "renderer.h"
 
 #include <math.h>
+#include <stdio.h>
 
 float math_clamp(float n, float lower, float upper) {
     if (n < lower)
@@ -54,6 +55,23 @@ float math_vec2_angle_cos(struct vec2 a, struct vec2 b) {
 
 float math_vec2_angle(struct vec2 a, struct vec2 b) {
     return acosf(math_vec2_angle_cos(a, b));
+}
+
+struct vec2 math_vec2_mul_matrix(struct vec2 vec, struct matrix *m) {
+
+    struct vec4 v = (struct vec4){
+        vec.x,
+        vec.y,
+        0.0f,
+        0.0f,
+    };
+
+    struct vec2 r;
+
+    r.x = m->m[0] * v.x + m->m[4] * v.y + m->m[8] * v.z + m->m[12] * v.w;
+    r.y = m->m[1] * v.x + m->m[5] * v.y + m->m[9] * v.z + m->m[13] * v.w;
+
+    return r;
 }
 
 struct vec2i math_vec2_to_vec2i(struct vec2 v) {
@@ -129,4 +147,20 @@ void math_matrix_get_orthographic(struct render_context *r, struct matrix *m) {
     float half_h = (r->height / r->camera.zoom) * 0.5f;
 
     math_matrix_orthographic(m, -half_w, half_w, -half_h, half_h, -1.0f, 1.0f);
+}
+
+void math_vec2_print(struct vec2 v) {
+    printf("Vec2: (%.4f, %.4f)\n", v.x, v.y);
+}
+
+void math_vec4_print(struct vec4 v) {
+    printf("Vec4: (%.4f, %.4f, %.4f, %.4f)\n", v.x, v.y, v.z, v.w);
+}
+
+void math_matrix_print(struct matrix *m) {
+    printf("Matrix:\n");
+    for (int i = 0; i < 4; i++) {
+        printf("\tRow %d: [%.4f, %.4f, %.4f, %.4f]\n", i + 1, m->m[i + 0],
+               m->m[i + 1], m->m[i + 2], m->m[i + 3]);
+    }
 }
