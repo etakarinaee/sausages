@@ -7,7 +7,6 @@
 // clang-format on
 
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 /* high because of stubsteps */
@@ -34,11 +33,14 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size,
 
     b.points = malloc(b.points_count * sizeof(struct ph_soft_body_point));
 
+    b.frame_points = malloc(b.points_count * sizeof(struct vec2));
+
     int springs_horizontal = (width - 1) * height;
     int springs_vertical = width * (height - 1);
     int springs_diagonal = (width - 1) * (height - 1) * 2;
 
-    b.springs_count = springs_horizontal + springs_vertical + springs_diagonal;
+    b.springs_count = springs_horizontal + springs_vertical + springs_diagonal +
+                      b.points_count; /* for frame */
     b.springs = malloc(b.springs_count * sizeof(struct ph_spring));
 
     /* i know i know very reliable increase here */
@@ -64,6 +66,11 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size,
                     },
             };
 
+            b.frame_points[point_idx] = (struct vec2){
+                .x = pos.x + x * rest_len,
+                .y = pos.y + y * rest_len,
+            };
+
             point_idx++;
         }
     }
@@ -74,6 +81,14 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size,
     for (int i = 0; i < b.points_count; i++) {
         int x = i % width;
         int y = i / width;
+
+        /* attach spring from point to frame point */
+        b.springs[spring_idx++] = (struct ph_spring){
+            .rest_len = 0.0f,
+            .start = i,
+            .end = i,
+            .end_frame = true,
+        };
 
         /* vertical down */
         if (i + stride < b.points_count) {
@@ -159,25 +174,42 @@ struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size,
 static void ph_apply_spring_forces(struct ph_soft_body *b,
                                    struct ph_spring *s) {
     struct ph_soft_body_point *start = &b->points[s->start];
-    struct ph_soft_body_point *end = &b->points[s->end];
 
-    struct vec2 delta = math_vec2_subtract(end->pos, start->pos);
-    float dist = math_vec2_length(delta);
-    if (dist < 0.0001f)
-        return;
+    if (s->end_frame) {
+        struct vec2 end = b->frame_points[s->end];
 
-    struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
+        struct vec2 delta = math_vec2_subtract(end, start->pos);
+        float dist = math_vec2_length(delta);
+        if (dist < 0.0001f)
+            return;
 
-    float f_spring = (dist - s->rest_len) * b->stiffness;
-    struct vec2 spring_f = math_vec2_scale(norm, f_spring);
+        struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
 
-    float rel_vel_along =
-        math_vec2_dot(math_vec2_subtract(end->vel, start->vel), norm);
-    struct vec2 damp_f = math_vec2_scale(norm, rel_vel_along * b->damping);
+        float f_spring = (dist - s->rest_len) * b->stiffness;
+        struct vec2 spring_f = math_vec2_scale(norm, f_spring);
 
-    struct vec2 total = math_vec2_add(spring_f, damp_f);
-    start->force = math_vec2_add(start->force, total);
-    end->force = math_vec2_subtract(end->force, total);
+        start->force = math_vec2_add(start->force, spring_f);
+    } else {
+        struct ph_soft_body_point *end = &b->points[s->end];
+
+        struct vec2 delta = math_vec2_subtract(end->pos, start->pos);
+        float dist = math_vec2_length(delta);
+        if (dist < 0.0001f)
+            return;
+
+        struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
+
+        float f_spring = (dist - s->rest_len) * b->stiffness;
+        struct vec2 spring_f = math_vec2_scale(norm, f_spring);
+
+        float rel_vel_along =
+            math_vec2_dot(math_vec2_subtract(end->vel, start->vel), norm);
+        struct vec2 damp_f = math_vec2_scale(norm, rel_vel_along * b->damping);
+
+        struct vec2 total = math_vec2_add(spring_f, damp_f);
+        start->force = math_vec2_add(start->force, total);
+        end->force = math_vec2_subtract(end->force, total);
+    }
 }
 
 static void ph_soft_body_point_self_collision(struct ph_soft_body *b, int idx,
@@ -237,6 +269,19 @@ void ph_soft_body_update_substep(struct ph_soft_body *b, float dt) {
     }
 }
 
+static void ph_soft_body_transform_frame(struct ph_soft_body *b) {
+    struct vec2 frame_pos = ph_soft_body_get_pos(b, SOFT_BODY_FRAME);
+    struct vec2 pos = ph_soft_body_get_pos(b, SOFT_BODY_POS);
+
+    for (int i = 0; i < b->points_count; i++) {
+        struct vec2 *p = &b->frame_points[i];
+        struct vec2 delta_frame = math_vec2_subtract(*p, frame_pos);
+        struct vec2 delta_pos = math_vec2_subtract(pos, *p);
+        struct vec2 push = math_vec2_add(delta_frame, delta_pos);
+        *p = math_vec2_add(*p, push);
+    }
+}
+
 void ph_soft_body_update(struct ph_soft_body *b, float dt,
                          struct color3 color) {
     const int substeps = 8;
@@ -244,6 +289,8 @@ void ph_soft_body_update(struct ph_soft_body *b, float dt,
     for (int s = 0; s < substeps; s++) {
         ph_soft_body_update_substep(b, sub_dt);
     }
+
+    ph_soft_body_transform_frame(b);
 
     float vertices[b->points_count * 2];
 
@@ -355,19 +402,46 @@ void ph_soft_body_destroy(struct ph_soft_body *b) {
         free(b->springs);
     if (b->edges)
         free(b->edges);
+    if (b->frame_points)
+        free(b->frame_points);
 }
 
-struct vec2 ph_soft_body_get_pos(struct ph_soft_body *b) {
+struct vec2 ph_soft_body_get_pos(struct ph_soft_body *b, int type,
+                                 float *angle) {
     float x = 0.0f;
     float y = 0.0f;
 
-    for (int i = 0; i < b->points_count; i++) {
-        x += b->points[i].pos.x;
-        y += b->points[i].pos.y;
+    switch (type) {
+    case SOFT_BODY_POS:
+        for (int i = 0; i < b->points_count; i++) {
+            x += b->points[i].pos.x;
+            y += b->points[i].pos.y;
+        }
+        break;
+    case SOFT_BODY_FRAME:
+        for (int i = 0; i < b->points_count; i++) {
+            x += b->frame_points[i].x;
+            y += b->frame_points[i].y;
+        }
+        break;
     }
 
     x /= b->points_count;
     y /= b->points_count;
 
-    return (struct vec2){x, y};
+    struct vec2 pos = (struct vec2){x, y};
+
+    if (angle) {
+        *angle = 0.0f;
+        for (int i = 0; i < b->points_count; i++) {
+            float pos_to_overall_pos =
+                math_vec2_length(math_vec2_subtract(b->points[i].pos, pos));
+            float hypotenuse = math_vec2_length(
+                math_vec2_subtract(b->points[i].pos, b->frame_points[i]));
+            *angle += acosf(pos_to_overall_pos / hypotenuse);
+        }
+        *angle /= b->points_count;
+    }
+
+    return pos;
 }
