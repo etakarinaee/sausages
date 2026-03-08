@@ -171,7 +171,7 @@ function game_update(delta_time)
                 core.softbody_apply_force(softbody_two, {speed * 90 * tick_rate, 0})
             end
             if core.key_just_down(key.space) then
-                core.softbody_apply_force(softbody_two, {0, speed * 1500 * tick_rate})
+                core.softbody_apply_force(softbody_two, {0, speed * 15000 * tick_rate})
             end 
         end
 

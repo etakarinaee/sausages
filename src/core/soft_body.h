@@ -17,11 +17,6 @@ struct ph_soft_body_point {
     float mass;
 };
 
-struct ph_soft_body_frame_point {
-    struct vec2 pos;
-    struct vec2 vel;
-};
-
 struct ph_spring {
     /* handles to ph_soft_body_point */
     int start;
@@ -42,7 +37,7 @@ struct ph_soft_body {
     struct ph_soft_body_point *points;
     struct ph_spring *springs;
     struct ph_edge *edges;
-    struct ph_soft_body_frame_point *frame_points;
+    struct ph_soft_body_point *frame_points;
 
     float point_radius;
     float stiffness;
