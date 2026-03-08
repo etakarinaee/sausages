@@ -201,31 +201,8 @@ static void ph_apply_spring_forces(struct ph_soft_body *b,
 
     struct vec2 total = math_vec2_add(spring_f, damp_f);
     start->force = math_vec2_add(start->force, total);
-    end->force = math_vec2_subtract(end->force, total);
-}
-
-void ph_soft_body_update_substep(struct ph_soft_body *b, float dt) {
-    for (int i = 0; i < b->points_count; i++) {
-        b->points[i].force = b->force; /* general outside force */
-    }
-    for (int i = 0; i < b->springs_count; i++) {
-        ph_apply_spring_forces(b, &b->springs[i]);
-    }
-
-    for (int i = 0; i < b->points_count; i++) {
-        struct ph_soft_body_point *p = &b->points[i];
-        p->vel = math_vec2_add(p->vel, math_vec2_scale(p->force, dt / p->mass));
-        p->pos = math_vec2_add(p->pos, math_vec2_scale(p->vel, dt));
-
-        if (coll_check_point_rect(p->pos, (struct vec2){-400, -50},
-                                  (struct vec2){800, 100})) {
-            p->pos.y = 50.0f;
-            p->vel.y *= -0.3f;
-        }
-
-        // ph_soft_body_point_self_collision(b, i, p);
-        p->vel = math_vec2_scale(p->vel, 0.999f);
-    }
+    if (!s->end_frame)
+        end->force = math_vec2_subtract(end->force, total);
 }
 
 static float ph_soft_body_compute_angle(struct ph_soft_body *b) {
@@ -261,6 +238,35 @@ static void ph_soft_body_transform_frame(struct ph_soft_body *b) {
         delta = math_vec2_mul_matrix(delta, &m);
 
         *p = math_vec2_add(sim_center, delta);
+    }
+}
+
+static inline void ph_soft_body_update_point(struct ph_soft_body_point *p,
+                                             float dt) {
+    p->vel = math_vec2_add(p->vel, math_vec2_scale(p->force, dt / p->mass));
+    p->pos = math_vec2_add(p->pos, math_vec2_scale(p->vel, dt));
+
+    /* TODO: make this not hardcoded */
+    if (coll_check_point_rect(p->pos, (struct vec2){-400, -50},
+                              (struct vec2){800, 100})) {
+        p->pos.y = 50.0f;
+        p->vel.y *= -0.3f;
+    }
+
+    p->vel = math_vec2_scale(p->vel, 0.999f);
+}
+
+void ph_soft_body_update_substep(struct ph_soft_body *b, float dt) {
+    for (int i = 0; i < b->points_count; i++) {
+        b->points[i].force = b->force; /* general outside force */
+        b->frame_points[i].force = b->force;
+    }
+    for (int i = 0; i < b->springs_count; i++) {
+        ph_apply_spring_forces(b, &b->springs[i]);
+    }
+
+    for (int i = 0; i < b->points_count; i++) {
+        ph_soft_body_update_point(&b->points[i], dt);
     }
 }
 

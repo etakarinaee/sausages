@@ -48,7 +48,7 @@ struct ph_soft_body {
     bool update_frame_pos; /* true when position need to be pulled again */
     bool update_pos;
 
-    struct vec2 force; /* acumalive outside force acting on the hole object */
+    struct vec2 force; /* acumalitive outside force acting on the hole object */
 
     struct vec2 size;
     struct mesh mesh;
