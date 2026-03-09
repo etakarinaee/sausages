@@ -259,7 +259,6 @@ static inline void ph_soft_body_update_point(struct ph_soft_body_point *p,
 void ph_soft_body_update_substep(struct ph_soft_body *b, float dt) {
     for (int i = 0; i < b->points_count; i++) {
         b->points[i].force = b->force; /* general outside force */
-        b->frame_points[i].force = b->force;
     }
     for (int i = 0; i < b->springs_count; i++) {
         ph_apply_spring_forces(b, &b->springs[i]);
@@ -439,15 +438,29 @@ struct vec2 ph_soft_body_get_pos(struct ph_soft_body *b, int type) {
     return pos;
 }
 
+static void update_pos(struct ph_soft_body *b, int type) {
+    struct vec2 prev_center = ph_soft_body_get_pos(b, type);
+    struct vec2 center = type == SOFT_BODY_POS ? b->pos : b->frame_pos;
+
+    for (int i = 0; i < b->points_count; i++) {
+        struct ph_soft_body_point *p =
+            type == SOFT_BODY_POS ? &b->points[i] : &b->frame_points[i];
+        struct vec2 delta = math_vec2_subtract(prev_center, center);
+        p->pos = math_vec2_add(center, delta);
+    }
+}
+
 void ph_soft_body_set_pos(struct ph_soft_body *b, struct vec2 pos, int type) {
     switch (type) {
     case SOFT_BODY_POS:
         b->pos = pos;
         b->update_pos = false;
+        update_pos(b, SOFT_BODY_POS);
         break;
     case SOFT_BODY_FRAME:
         b->frame_pos = pos;
         b->update_frame_pos = false;
+        update_pos(b, SOFT_BODY_FRAME);
         break;
     }
 }

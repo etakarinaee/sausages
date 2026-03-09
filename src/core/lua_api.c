@@ -384,7 +384,6 @@ static int l_softbody_set_pos(lua_State *L) {
     ph_soft_body_set_pos(&game_context.soft_bodies[handle], pos,
                          SOFT_BODY_FRAME);
 
-    ph_soft_body_set_pos(&game_context.soft_bodies[handle], pos, SOFT_BODY_POS);
     return 0;
 }
 
