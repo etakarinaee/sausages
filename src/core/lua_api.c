@@ -227,19 +227,27 @@ static int l_create_mesh(lua_State *L) {
     float vertices[vertex_count];
 
     for (int i = 0; i < vertex_count; i++) {
-        lua_rawgeti(L, 2, 1);
+        lua_rawgeti(L, 2, i);
         vertices[i] = (float)luaL_checknumber(L, -1);
         lua_pop(L, 1);
     }
 
+    const int indices_count = luaL_checkinteger(L, 3);
+    luaL_checktype(L, 4, LUA_TTABLE);
+
+    uint32_t indices[indices_count];
+
+    for (int i = 0; i < indices_count; i++) {
+        lua_rawgeti(L, 4, i);
+        indices[i] = luaL_checkinteger(L, 4);
+        lua_pop(L, 1);
+    }
+
     const struct color3 color = check_color3(L, 3);
-    /*
-         TODO: implement ebo generation
-        int handle = game_context.meshs_index;
-        game_context.meshs[game_context.meshs_index++] =
-            renderer_create_mesh(vertices, vertex_count, color);
-        lua_pushinteger(L, handle);
-        */
+    int handle = game_context.meshs_index;
+    game_context.meshs[game_context.meshs_index++] = renderer_create_mesh(
+        vertices, vertex_count, indices, indices_count, color);
+    lua_pushinteger(L, handle);
     return 1;
 }
 
@@ -792,7 +800,10 @@ static const luaL_Reg api[] = {
     {"push_texture_ex", l_push_texture_ex},
     {"push_text", l_push_text},
     {"push_text_ex", l_push_text_ex},
+    {"push_mesh", l_push_mesh},
 
+    {"create_mesh", l_create_mesh},
+    {"update_mesh", l_update_mesh},
     {"load_texture", l_load_texture},
     {"load_font", l_load_font},
     {"create_softbody", l_create_softbody},
