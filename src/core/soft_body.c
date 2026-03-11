@@ -10,9 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* high because of stubsteps */
-#define PH_GRAVITY_VEC ((struct vec2){0.0f, -900.0f})
-
 struct ph_soft_body ph_soft_body_create_rect(struct vec2 pos, struct vec2 size,
                                              struct color3 color) {
     struct ph_soft_body b;
@@ -190,14 +187,16 @@ static void ph_apply_spring_forces(struct ph_soft_body *b,
 
     struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
 
-    float coefficent =
+    float stiff_coef =
         s->end_frame ? 0.7f : 1.0f; /* not as strong springs for frame */
-    float f_spring = (dist - s->rest_len) * b->stiffness * coefficent;
+    float damp_coef = s->end_frame ? 6.0f : 1.0f;
+    float f_spring = (dist - s->rest_len) * b->stiffness * stiff_coef;
     struct vec2 spring_f = math_vec2_scale(norm, f_spring);
 
     float rel_vel_along =
         math_vec2_dot(math_vec2_subtract(end->vel, start->vel), norm);
-    struct vec2 damp_f = math_vec2_scale(norm, rel_vel_along * b->damping);
+    struct vec2 damp_f =
+        math_vec2_scale(norm, rel_vel_along * b->damping * damp_coef);
 
     struct vec2 total = math_vec2_add(spring_f, damp_f);
     start->force = math_vec2_add(start->force, total);
@@ -387,6 +386,13 @@ void ph_soft_body_apply_force(struct ph_soft_body *b, struct vec2 force) {
 void ph_soft_body_draw(struct ph_soft_body *b) {
     renderer_push_mesh(&render_context, b->mesh, (struct vec2){0, 0},
                        (struct vec2){1.0f, 1.0f});
+
+    for (int i = 0; i < b->points_count; i++) {
+        renderer_push_circle(&render_context, b->points[i].pos, 15.0f,
+                             (struct color3){0.5f, 0.9f, 0.2f});
+        renderer_push_circle(&render_context, b->frame_points[i].pos, 15.0f,
+                             (struct color3){0.9f, 0.9f, 0.2f});
+    }
 }
 
 void ph_soft_body_destroy(struct ph_soft_body *b) {
@@ -445,8 +451,8 @@ static void update_pos(struct ph_soft_body *b, int type) {
     for (int i = 0; i < b->points_count; i++) {
         struct ph_soft_body_point *p =
             type == SOFT_BODY_POS ? &b->points[i] : &b->frame_points[i];
-        struct vec2 delta = math_vec2_subtract(prev_center, center);
-        p->pos = math_vec2_add(center, delta);
+        struct vec2 delta = math_vec2_subtract(p->pos, prev_center);
+        p->pos = math_vec2_add(center, math_vec2_scale(delta, -1));
     }
 }
 

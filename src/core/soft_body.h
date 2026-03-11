@@ -31,6 +31,10 @@ struct ph_edge {
 };
 
 struct ph_soft_body {
+    float stiffness;
+    float damping;
+    float point_radius;
+
     int points_count;
     int springs_count;
     int edges_count;
@@ -38,10 +42,6 @@ struct ph_soft_body {
     struct ph_spring *springs;
     struct ph_edge *edges;
     struct ph_soft_body_point *frame_points;
-
-    float point_radius;
-    float stiffness;
-    float damping;
 
     struct vec2 frame_pos;
     struct vec2 pos;

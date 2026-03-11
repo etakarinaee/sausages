@@ -57,7 +57,7 @@ end
 
 local image = core.load_texture("../test.png")
 
-local font = core.load_font("../AdwaitaSans-Regular.ttf", 48, {32, 128})
+local font = core.load_font("../AdwaitaSans-Regular.ttf", 38, {32, 128})
 local_nickname = os.getenv("SAUSAGES_NICKNAME") or "Player"
 
 local softbody = 0
