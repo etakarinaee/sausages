@@ -223,6 +223,34 @@ static float ph_soft_body_compute_angle(struct ph_soft_body *b) {
     return angle;
 }
 
+static float compute_moment(struct ph_soft_body_point *p,
+                            struct vec2 frame_center) {
+    float distance = math_vec2_distance(frame_center, p->pos);
+    float angle = math_vec2_angle(p->pos, frame_center);
+    float moment = math_vec2_length(p->force) * distance * sinf(angle);
+    return moment;
+}
+
+static float get_angle(struct ph_soft_body *b) {
+    // rotational engery
+    struct vec2 frame_center = ph_soft_body_get_pos(b, SOFT_BODY_FRAME);
+    float moment = 0.0f;
+    for (int i = 0; i < b->points_count; i++) {
+        moment += compute_moment(&b->points[i], frame_center);
+    }
+
+    // mass
+    float mass = 0.0f;
+    for (int i = 0; i < b->points_count; i++) {
+        mass += b->points[i].mass;
+    }
+
+    printf("Moment %.4f\n", moment);
+    printf("Mass: %.4f\n", mass);
+
+    return moment / mass;
+}
+
 static void ph_soft_body_transform_frame(struct ph_soft_body *b) {
     float angle = ph_soft_body_compute_angle(b);
     struct vec2 frame_center = ph_soft_body_get_pos(b, SOFT_BODY_FRAME);
@@ -231,6 +259,9 @@ static void ph_soft_body_transform_frame(struct ph_soft_body *b) {
     for (int i = 0; i < b->points_count; i++) {
         struct vec2 *p = &b->frame_points[i].pos;
         struct vec2 delta = math_vec2_subtract(*p, frame_center);
+
+        float angle1 = get_angle(b);
+        printf("Angle: %.4f\n", angle);
 
         struct matrix m;
         math_matrix_rotate_2d(&m, angle);

@@ -373,8 +373,8 @@ static int l_destroy_softbody(lua_State *L) {
 
 static int l_softbody_get_pos(lua_State *L) {
     const int handle = luaL_checknumber(L, 1);
-    struct vec2 pos =
-        ph_soft_body_get_pos(&game_context.soft_bodies[handle], SOFT_BODY_POS);
+    struct vec2 pos = ph_soft_body_get_pos(&game_context.soft_bodies[handle],
+                                           SOFT_BODY_FRAME);
 
     lua_newtable(L);
     lua_pushinteger(L, pos.x);
