@@ -54,7 +54,7 @@ float math_vec2_angle_cos(struct vec2 a, struct vec2 b) {
 }
 
 float math_vec2_angle(struct vec2 a, struct vec2 b) {
-    return acosf(math_vec2_dot(a, b));
+    return acosf(math_vec2_angle_cos(a, b));
 }
 
 struct vec2 math_vec2_mul_matrix(struct vec2 vec, struct matrix *m) {

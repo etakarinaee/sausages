@@ -199,7 +199,7 @@ static void ph_apply_spring_forces(struct ph_soft_body *b,
         math_vec2_scale(norm, rel_vel_along * b->damping * damp_coef);
 
     struct vec2 total = math_vec2_add(spring_f, damp_f);
-    start->force = math_vec2_add(start->force, total);
+    start->force = math_vec2_add(math_vec2_add(b->force, start->force), total);
     if (!s->end_frame)
         end->force = math_vec2_subtract(end->force, total);
 }
@@ -238,6 +238,7 @@ static float get_angle(struct ph_soft_body *b) {
     for (int i = 0; i < b->points_count; i++) {
         moment += compute_moment(&b->points[i], frame_center);
     }
+    moment /= b->points_count;
 
     // mass
     float mass = 0.0f;
@@ -245,8 +246,8 @@ static float get_angle(struct ph_soft_body *b) {
         mass += b->points[i].mass;
     }
 
-    printf("Moment %.4f\n", moment);
-    printf("Mass: %.4f\n", mass);
+    // printf("Moment %.4f\n", moment);
+    // printf("Mass: %.4f\n", mass);
 
     return moment / mass;
 }
@@ -261,7 +262,7 @@ static void ph_soft_body_transform_frame(struct ph_soft_body *b) {
         struct vec2 delta = math_vec2_subtract(*p, frame_center);
 
         float angle1 = get_angle(b);
-        printf("Angle: %.4f\n", angle);
+        // printf("Angle: %.4f\n", angle1);
 
         struct matrix m;
         math_matrix_rotate_2d(&m, angle);
@@ -288,7 +289,8 @@ static inline void ph_soft_body_update_point(struct ph_soft_body_point *p,
 
 void ph_soft_body_update_substep(struct ph_soft_body *b, float dt) {
     for (int i = 0; i < b->points_count; i++) {
-        b->points[i].force = b->force; /* general outside force */
+        b->points[i].force =
+            (struct vec2){0.0f, 0.0f}; /* general outside force */
     }
     for (int i = 0; i < b->springs_count; i++) {
         ph_apply_spring_forces(b, &b->springs[i]);
@@ -418,12 +420,14 @@ void ph_soft_body_draw(struct ph_soft_body *b) {
     renderer_push_mesh(&render_context, b->mesh, (struct vec2){0, 0},
                        (struct vec2){1.0f, 1.0f});
 
-    for (int i = 0; i < b->points_count; i++) {
-        renderer_push_circle(&render_context, b->points[i].pos, 15.0f,
-                             (struct color3){0.5f, 0.9f, 0.2f});
-        renderer_push_circle(&render_context, b->frame_points[i].pos, 15.0f,
-                             (struct color3){0.9f, 0.9f, 0.2f});
-    }
+    /*
+        for (int i = 0; i < b->points_count; i++) {
+            renderer_push_circle(&render_context, b->points[i].pos, 15.0f,
+                                 (struct color3){0.5f, 0.9f, 0.2f});
+            renderer_push_circle(&render_context, b->frame_points[i].pos, 15.0f,
+                                 (struct color3){0.9f, 0.9f, 0.2f});
+        }
+        */
 }
 
 void ph_soft_body_destroy(struct ph_soft_body *b) {
