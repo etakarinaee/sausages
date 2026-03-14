@@ -16,7 +16,7 @@
 #include "input.h"
 #include "local.h"
 #include "net.h"
-#include "soft_body.h"
+#include "softbody.h"
 #include "ui.h"
 #include "voice.h"
 
@@ -220,6 +220,15 @@ static int l_push_mesh(lua_State *L) {
     return 0;
 }
 
+static int l_push_line(lua_State *L) {
+    const struct vec2 start = check_vec2(L, 1);
+    const struct vec2 end = check_vec2(L, 2);
+    const float width = luaL_checknumber(L, 3);
+
+    renderer_push_line(&render_context, start, end, width);
+    return 0;
+}
+
 static int l_create_mesh(lua_State *L) {
     const int vertex_count = luaL_checkinteger(L, 1);
     luaL_checktype(L, 2, LUA_TTABLE);
@@ -297,7 +306,7 @@ static int l_create_softbody(lua_State *L) {
 
     int handle = game_context.soft_bodies_index;
     game_context.soft_bodies[game_context.soft_bodies_index++] =
-        ph_soft_body_create_rect(pos, size, color);
+        softbody_create_rect(pos, size, color);
     lua_pushinteger(L, handle);
     return 1;
 }
@@ -307,7 +316,7 @@ static int l_update_softbody(lua_State *L) {
     const float dt = luaL_checknumber(L, 2);
     const struct color3 color = check_color3(L, 3);
 
-    ph_soft_body_update(&game_context.soft_bodies[handle], dt, color);
+    softbody_update(&game_context.soft_bodies[handle], dt, color);
 
     return 0;
 }
@@ -316,7 +325,7 @@ static int l_softbody_apply_velocity(lua_State *L) {
     const int handle = luaL_checkinteger(L, 1);
     const struct vec2 vel = check_vec2(L, 2);
 
-    ph_soft_body_apply_velocity(&game_context.soft_bodies[handle], vel);
+    softbody_apply_velocity(&game_context.soft_bodies[handle], vel);
 
     return 0;
 }
@@ -325,7 +334,7 @@ static int l_softbody_apply_force(lua_State *L) {
     const int handle = luaL_checkinteger(L, 1);
     const struct vec2 force = check_vec2(L, 2);
 
-    ph_soft_body_apply_force(&game_context.soft_bodies[handle], force);
+    softbody_apply_force(&game_context.soft_bodies[handle], force);
 
     return 0;
 }
@@ -347,7 +356,7 @@ static int l_softbody_check_coll(lua_State *L) {
             if (i == j)
                 continue;
             int b = handles[j];
-            ph_soft_body_check_coll(&game_context.soft_bodies[a],
+            softbody_check_coll(&game_context.soft_bodies[a],
                                     &game_context.soft_bodies[b]);
         }
     }
@@ -358,7 +367,7 @@ static int l_softbody_check_coll(lua_State *L) {
 static int l_draw_softbody(lua_State *L) {
     const int handle = luaL_checknumber(L, 1);
 
-    ph_soft_body_draw(&game_context.soft_bodies[handle]);
+    softbody_draw(&game_context.soft_bodies[handle]);
 
     return 0;
 }
@@ -366,15 +375,15 @@ static int l_draw_softbody(lua_State *L) {
 static int l_destroy_softbody(lua_State *L) {
     const int handle = luaL_checknumber(L, 1);
 
-    ph_soft_body_destroy(&game_context.soft_bodies[handle]);
+    softbody_destroy(&game_context.soft_bodies[handle]);
 
     return 0;
 }
 
 static int l_softbody_get_pos(lua_State *L) {
     const int handle = luaL_checknumber(L, 1);
-    struct vec2 pos = ph_soft_body_get_pos(&game_context.soft_bodies[handle],
-                                           SOFT_BODY_FRAME);
+    struct vec2 pos = softbody_get_pos(&game_context.soft_bodies[handle],
+                                           SOFTBODY_FRAME);
 
     lua_newtable(L);
     lua_pushinteger(L, pos.x);
@@ -389,8 +398,8 @@ static int l_softbody_get_pos(lua_State *L) {
 static int l_softbody_set_pos(lua_State *L) {
     const int handle = luaL_checknumber(L, 1);
     struct vec2 pos = check_vec2(L, 2);
-    ph_soft_body_set_pos(&game_context.soft_bodies[handle], pos,
-                         SOFT_BODY_FRAME);
+    softbody_set_pos(&game_context.soft_bodies[handle], pos,
+                         SOFTBODY_FRAME);
 
     return 0;
 }
@@ -801,6 +810,7 @@ static const luaL_Reg api[] = {
     {"push_text", l_push_text},
     {"push_text_ex", l_push_text_ex},
     {"push_mesh", l_push_mesh},
+    {"push_line", l_push_line},
 
     {"create_mesh", l_create_mesh},
     {"update_mesh", l_update_mesh},

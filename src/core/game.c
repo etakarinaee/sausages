@@ -1,13 +1,13 @@
 
 #include "game.h"
-#include "soft_body.h"
+#include "softbody.h"
 #include <stdlib.h>
 
 struct game_context game_context;
 
 void game_init(void) {
     /* TODO: change to a dynamic array */
-    game_context.soft_bodies = malloc(100 * sizeof(struct ph_soft_body));
+    game_context.soft_bodies = malloc(100 * sizeof(struct softbody));
     game_context.soft_bodies_index = 0;
 
     /* TODO: change to a dynamic array */

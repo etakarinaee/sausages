@@ -11,7 +11,6 @@
 #include "lua.h"
 #include "net.h"
 #include "renderer.h"
-#include "soft_body.h" /* temp as long as no lua api */
 #include "voice.h"
 
 #ifdef SERVER

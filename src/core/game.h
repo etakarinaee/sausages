@@ -3,10 +3,10 @@
 #define GAME_H
 
 #include "renderer.h"
-#include "soft_body.h"
+#include "softbody.h"
 
 struct game_context {
-    struct ph_soft_body *soft_bodies;
+    struct softbody *soft_bodies;
     int soft_bodies_index;
     struct mesh *meshs;
     int meshs_index;
