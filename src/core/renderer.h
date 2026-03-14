@@ -32,6 +32,7 @@ enum {
     QUAD_TYPE_TEXTURE,
     QUAD_TYPE_TEXT,
     QUAD_TYPE_MESH,
+    QUAD_TYPE_LINE,
 };
 
 struct mesh {
@@ -59,6 +60,12 @@ struct quad_data {
         } texture;
 
         struct mesh mesh;
+
+        struct {
+            struct vec2 start;
+            struct vec2 end;
+            float width;
+        } line;
 
         struct color3 color;
     } data;
@@ -118,6 +125,7 @@ struct render_context {
     GLuint tex_program;
     GLuint text_program;
     GLuint mesh_program;
+    GLuint line_program;
 
     struct quad_data *quads;
     size_t quads_count;
@@ -143,6 +151,8 @@ void renderer_push_text(struct render_context *r, struct vec2 pos, float scale,
                         const char *text, int anchor);
 void renderer_push_mesh(struct render_context *r, struct mesh mesh,
                         struct vec2 pos, struct vec2 scale);
+void renderer_push_line(struct render_context *r, struct vec2 start,
+                        struct vec2 end, float width);
 struct mesh renderer_create_mesh(float *vertices, int vertices_count,
                                  uint32_t *indices, int indices_count,
                                  struct color3 color);

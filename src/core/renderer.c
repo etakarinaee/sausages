@@ -157,6 +157,11 @@ int renderer_init(struct render_context *r) {
         return 1;
     }
 
+    if (program_init("line.vert", "line.frag", &r->line_program)) {
+        fprintf(stderr, "failed to init shaders!\n");
+        return 1;
+    }
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -424,6 +429,176 @@ void renderer_update_mesh(struct mesh *mesh, float *vertices, int vertex_count,
     glBindVertexArray(render_context.vao);
 }
 
+void renderer_push_line(struct render_context *r, struct vec2 start,
+                        struct vec2 end, float width) {
+    struct vec2 mid =
+        math_vec2_add(math_vec2_scale(start, 0.5f), math_vec2_scale(end, 0.5f));
+    struct quad_data data = (struct quad_data){
+        .type = QUAD_TYPE_LINE,
+        .pos = mid,
+        .scale = (struct vec2){1.0f, 1.0f},
+        .data.line.start = start,
+        .data.line.end = end,
+        .data.line.width = width,
+    };
+
+    renderer_push_quad(r, data);
+}
+
+static void render_rect(const struct quad_data *d, const struct matrix *model,
+                        const struct matrix *view) {
+    glUseProgram(render_context.quad_program);
+
+    /* Uniforms Locations */
+    GLint model_loc =
+        glGetUniformLocation(render_context.quad_program, "u_model");
+    GLint view_loc =
+        glGetUniformLocation(render_context.quad_program, "u_proj");
+    GLint color_loc =
+        glGetUniformLocation(render_context.quad_program, "u_color");
+
+    /* Setting for Uniforms */
+    glUniform3f(color_loc, d->data.color.r, d->data.color.g, d->data.color.b);
+    glUniformMatrix4fv(model_loc, 1, GL_FALSE, model->m);
+    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view->m);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
+static void render_circle(const struct quad_data *d, const struct matrix *model,
+                          const struct matrix *view) {
+
+    glUseProgram(render_context.circle_program);
+
+    /* Uniforms Locations */
+    GLint model_loc =
+        glGetUniformLocation(render_context.circle_program, "u_model");
+    GLint view_loc =
+        glGetUniformLocation(render_context.circle_program, "u_proj");
+    GLint color_loc =
+        glGetUniformLocation(render_context.circle_program, "u_color");
+    GLint radius_loc =
+        glGetUniformLocation(render_context.circle_program, "u_radius");
+
+    /* Setting for Uniforms */
+    glUniform3f(color_loc, d->data.color.r, d->data.color.g, d->data.color.b);
+    glUniformMatrix4fv(model_loc, 1, GL_FALSE, model->m);
+    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view->m);
+    glUniform1f(radius_loc, d->scale.x);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
+static void render_texture(const struct quad_data *d,
+                           const struct matrix *model,
+                           const struct matrix *view) {
+
+    glUseProgram(render_context.tex_program);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, d->data.texture.tex_id);
+
+    /* Uniforms Locations */
+    GLint model_loc =
+        glGetUniformLocation(render_context.tex_program, "u_model");
+    GLint view_loc = glGetUniformLocation(render_context.tex_program, "u_proj");
+    GLint color_loc =
+        glGetUniformLocation(render_context.tex_program, "u_color");
+    GLint sampler_loc =
+        glGetUniformLocation(render_context.tex_program, "u_texture");
+
+    /* Setting for Uniforms */
+    glUniform3f(color_loc, d->data.color.r, d->data.color.g, d->data.color.b);
+    glUniformMatrix4fv(model_loc, 1, GL_FALSE, model->m);
+    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view->m);
+    glUniform1i(sampler_loc, 0);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
+static void render_text(const struct quad_data *d, const struct matrix *model,
+                        const struct matrix *view) {
+
+    glUseProgram(render_context.text_program);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, d->data.text.tex_id);
+
+    /* Unfirom Locations */
+    GLint model_loc =
+        glGetUniformLocation(render_context.text_program, "u_model");
+    GLint view_loc =
+        glGetUniformLocation(render_context.text_program, "u_proj");
+    GLint sampler_loc =
+        glGetUniformLocation(render_context.text_program, "u_texture");
+    GLint glyph_min_loc =
+        glGetUniformLocation(render_context.text_program, "u_glyph_min");
+    GLint glyph_size_loc =
+        glGetUniformLocation(render_context.text_program, "u_glyph_size");
+    GLint text_color_loc =
+        glGetUniformLocation(render_context.text_program, "u_text_color");
+
+    /* Setting for Uniforms */
+    glUniform2f(glyph_min_loc, d->data.text.min.x, d->data.text.min.y);
+    glUniform2f(glyph_size_loc, d->data.text.size.x, d->data.text.size.y);
+    glUniform3f(text_color_loc, d->data.text.color.r, d->data.text.color.g,
+                d->data.text.color.b);
+    glUniform1i(sampler_loc, 0);
+    glUniformMatrix4fv(model_loc, 1, GL_FALSE, model->m);
+    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view->m);
+
+    glDepthMask(GL_FALSE);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glDepthMask(GL_TRUE);
+}
+
+static void render_mesh(const struct quad_data *d, const struct matrix *model,
+                        const struct matrix *view) {
+
+    glUseProgram(render_context.mesh_program);
+
+    /* Uniforms Locations */
+    GLint model_loc =
+        glGetUniformLocation(render_context.mesh_program, "u_model");
+    GLint view_loc =
+        glGetUniformLocation(render_context.mesh_program, "u_proj");
+    GLint color_loc =
+        glGetUniformLocation(render_context.mesh_program, "u_color");
+
+    /* Setting for Uniforms */
+    glUniform3f(color_loc, d->data.mesh.color.r, d->data.mesh.color.g,
+                d->data.mesh.color.b);
+    glUniformMatrix4fv(model_loc, 1, GL_FALSE, model->m);
+    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view->m);
+
+    glBindVertexArray(d->data.mesh.vao);
+    glDrawElements(GL_TRIANGLES, d->data.mesh.indices_count, GL_UNSIGNED_INT,
+                   0);
+    glBindVertexArray(render_context.vao);
+}
+
+static void render_line(const struct quad_data *d, const struct matrix *model,
+                        const struct matrix *view) {
+
+    glUseProgram(render_context.line_program);
+
+    /* Uniforms Locations */
+    GLint model_loc =
+        glGetUniformLocation(render_context.line_program, "u_model");
+    GLint view_loc =
+        glGetUniformLocation(render_context.line_program, "u_proj");
+    GLint start_loc =
+        glGetUniformLocation(render_context.line_program, "u_start");
+    GLint end_loc = glGetUniformLocation(render_context.line_program, "u_end");
+
+    /* Setting for Uniforms */
+    glUniformMatrix4fv(model_loc, 1, GL_FALSE, model->m);
+    glUniformMatrix4fv(view_loc, 1, GL_FALSE, view->m);
+    glUniform2f(start_loc, d->data.line.start.x, d->data.line.start.y);
+    glUniform2f(end_loc, d->data.line.end.x, d->data.line.end.y);
+
+    glLineWidth(d->data.line.width);
+    glDrawArrays(GL_LINES, 0, 2);
+}
+
 void renderer_draw(struct render_context *r) {
     glBindVertexArray(r->vao);
 
@@ -449,129 +624,30 @@ void renderer_draw(struct render_context *r) {
         struct matrix m;
         math_matrix_mul(&m, &translate_m, &scale_rot_m);
 
-        GLint uniform_matrix_model_loc;
-        GLint uniform_matrix_cam_loc;
-
         switch (data->type) {
         case QUAD_TYPE_RECT:
-            goto render_rect;
+            render_rect(data, &m, &cam_m);
+            break;
         case QUAD_TYPE_CIRCLE:
-            goto render_circle;
+            render_circle(data, &m, &cam_m);
+            break;
         case QUAD_TYPE_TEXTURE:
             if (data->data.texture.tex_id == CORE_RENDERER_QUAD_NO_TEXTURE) {
-                goto render_rect;
+                render_rect(data, &m, &cam_m);
+                break;
             }
-            goto render_texture;
+            render_texture(data, &m, &cam_m);
+            break;
         case QUAD_TYPE_TEXT:
-            goto render_text;
+            render_text(data, &m, &cam_m);
+            break;
         case QUAD_TYPE_MESH:
-            goto render_mesh;
-        default:
-            goto render_rect;
+            render_mesh(data, &m, &cam_m);
+            break;
+        case QUAD_TYPE_LINE:
+            render_line(data, &m, &cam_m);
+            break;
         }
-
-        GLint sampler_loc;
-        GLint uniform_color_loc;
-
-    /* RECT */
-    render_rect:
-        glUseProgram(r->quad_program);
-        uniform_matrix_model_loc =
-            glGetUniformLocation(r->quad_program, "u_model");
-        uniform_matrix_cam_loc =
-            glGetUniformLocation(r->quad_program, "u_proj");
-
-        uniform_color_loc = glGetUniformLocation(r->quad_program, "u_color");
-        glUniform3f(uniform_color_loc, data->data.color.r, data->data.color.g,
-                    data->data.color.b);
-        goto render;
-
-    /* CIRCLE */
-    render_circle:
-        glUseProgram(r->circle_program);
-        uniform_matrix_model_loc =
-            glGetUniformLocation(r->circle_program, "u_model");
-        uniform_matrix_cam_loc =
-            glGetUniformLocation(r->circle_program, "u_proj");
-
-        uniform_color_loc = glGetUniformLocation(r->circle_program, "u_color");
-        glUniform3f(uniform_color_loc, data->data.color.r, data->data.color.g,
-                    data->data.color.b);
-
-        GLint uniform_radius_loc =
-            glGetUniformLocation(r->circle_program, "u_radius");
-        glUniform1f(uniform_radius_loc, data->scale.x);
-
-        goto render;
-
-    /* TEXTURE */
-    render_texture:
-        glUseProgram(r->tex_program);
-        uniform_matrix_model_loc =
-            glGetUniformLocation(r->tex_program, "u_model");
-        uniform_matrix_cam_loc = glGetUniformLocation(r->tex_program, "u_proj");
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, data->data.texture.tex_id);
-        sampler_loc = glGetUniformLocation(r->tex_program, "u_texture");
-        glUniform1i(sampler_loc, 0);
-        goto render;
-
-    /* TEXT */
-    render_text:
-        glUseProgram(r->text_program);
-        uniform_matrix_model_loc =
-            glGetUniformLocation(r->text_program, "u_model");
-        uniform_matrix_cam_loc =
-            glGetUniformLocation(r->text_program, "u_proj");
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, data->data.text.tex_id);
-        sampler_loc = glGetUniformLocation(r->text_program, "u_texture");
-        glUniform1i(sampler_loc, 0);
-
-        GLint uniform_glyph_min_loc =
-            glGetUniformLocation(r->text_program, "u_glyph_min");
-        GLint uniform_glyph_size_loc =
-            glGetUniformLocation(r->text_program, "u_glyph_size");
-        GLint uniform_text_color_loc =
-            glGetUniformLocation(r->text_program, "u_text_color");
-        glUniform2f(uniform_glyph_min_loc, data->data.text.min.x,
-                    data->data.text.min.y);
-        glUniform2f(uniform_glyph_size_loc, data->data.text.size.x,
-                    data->data.text.size.y);
-        glUniform3f(uniform_text_color_loc, data->data.text.color.r,
-                    data->data.text.color.g, data->data.text.color.b);
-
-        glDepthMask(GL_FALSE);
-        goto render; /* In case for more labels */
-
-    /* MESH */
-    render_mesh:
-        glUseProgram(r->mesh_program);
-        uniform_matrix_model_loc =
-            glGetUniformLocation(r->mesh_program, "u_model");
-        uniform_matrix_cam_loc =
-            glGetUniformLocation(r->mesh_program, "u_proj");
-
-        uniform_color_loc = glGetUniformLocation(r->mesh_program, "u_color");
-        glUniform3f(uniform_color_loc, data->data.mesh.color.r,
-                    data->data.mesh.color.g, data->data.mesh.color.b);
-        glBindVertexArray(data->data.mesh.vao);
-        goto render;
-
-    render:
-        /* Always Used Uniforms */
-        glUniformMatrix4fv(uniform_matrix_model_loc, 1, GL_FALSE, m.m);
-        glUniformMatrix4fv(uniform_matrix_cam_loc, 1, GL_FALSE, cam_m.m);
-        if (data->type == QUAD_TYPE_MESH) {
-            glDrawElements(GL_TRIANGLES, data->data.mesh.indices_count,
-                           GL_UNSIGNED_INT, 0);
-        } else {
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        }
-        glDepthMask(GL_TRUE);
-        glBindVertexArray(r->vao);
     }
 
     r->quads_count = 0;
@@ -674,9 +750,9 @@ static uint8_t *font_get_atlas(const char *path, int font_size,
                 int dst_x = cell_x + x;
                 int dst_y = cell_y + y;
 
-                /* Overflow due to glyph being larger than cell in this case the
-                    glyph will just be a little weird at the momemnt but it
-                   shouldnt really be that visible */
+                /* Overflow due to glyph being larger than cell in this case
+                   the glyph will just be a little weird at the momemnt but
+                   it shouldnt really be that visible */
                 if (dst_x >= *width) {
                     continue;
                 }
