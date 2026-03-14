@@ -419,15 +419,18 @@ void ph_soft_body_draw(struct ph_soft_body *b) {
     renderer_push_mesh(&render_context, b->mesh, (struct vec2){0, 0},
                        (struct vec2){1.0f, 1.0f});
 
+    for (int i = 0; i < b->springs_count; i++) {
+        struct vec2 start = b->points[b->springs[i].start].pos;
+        struct vec2 end = b->points[b->springs[i].end].pos;
+        renderer_push_line(&render_context, start, end, 1);
+    }
+
     for (int i = 0; i < b->points_count; i++) {
         renderer_push_circle(&render_context, b->points[i].pos, 15.0f,
                              (struct color3){0.5f, 0.9f, 0.2f});
         renderer_push_circle(&render_context, b->frame_points[i].pos, 15.0f,
                              (struct color3){0.9f, 0.9f, 0.2f});
     }
-
-    renderer_push_line(&render_context, (struct vec2){-500, -500},
-                       (struct vec2){500, 500}, 10);
 }
 
 void ph_soft_body_destroy(struct ph_soft_body *b) {
