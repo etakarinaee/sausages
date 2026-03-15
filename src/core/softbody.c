@@ -263,10 +263,10 @@ static void softbody_transform_frame(struct softbody *b) {
         // printf("Angle: %.4f\n", angle1);
 
         struct matrix m;
-        math_matrix_rotate_2d(&m, 0.0f);
+        math_matrix_rotate_2d(&m, angle);
         delta = math_vec2_mul_matrix(delta, &m);
 
-        *p = math_vec2_add(sim_center, delta);
+        *p = math_vec2_add(frame_center, delta);
     }
 }
 
@@ -469,15 +469,27 @@ struct vec2 softbody_get_pos(struct softbody *b, int type) {
     return pos;
 }
 
+static struct vec2 compute_center(struct softbody *b, int type) {
+    float x = 0.0f, y = 0.0f;
+    int count = b->points_count;
+    for (int i = 0; i < count; i++) {
+        struct softbody_point *p =
+            type == SOFTBODY_POS ? &b->points[i] : &b->frame_points[i];
+        x += p->pos.x;
+        y += p->pos.y;
+    }
+    return (struct vec2){x / count, y / count};
+}
+
 static void update_pos(struct softbody *b, int type) {
-    struct vec2 prev_center = softbody_get_pos(b, type);
-    struct vec2 center = softbody_get_pos(b, type);
+    struct vec2 current_center = compute_center(b, type);
+    struct vec2 target = type == SOFTBODY_POS ? b->pos : b->frame_pos;
+    struct vec2 offset = math_vec2_subtract(target, current_center);
 
     for (int i = 0; i < b->points_count; i++) {
         struct softbody_point *p =
             type == SOFTBODY_POS ? &b->points[i] : &b->frame_points[i];
-        struct vec2 delta = math_vec2_subtract(p->pos, prev_center);
-        p->pos = math_vec2_add(center, math_vec2_scale(delta, -1));
+        p->pos = math_vec2_add(p->pos, offset);
     }
 }
 

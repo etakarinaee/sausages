@@ -692,7 +692,6 @@ static uint8_t *font_get_atlas(const char *path, int font_size,
     if (!path)
         return NULL;
 
-    // TODO: make the loading chars not constant
     font->char_range = char_range;
     const int chars_count = font->char_range.y - font->char_range.x + 1;
     if (chars_count < 0)
