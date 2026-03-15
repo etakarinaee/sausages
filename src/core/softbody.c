@@ -220,35 +220,6 @@ static float softbody_compute_angle(struct softbody *b) {
     return atan2f(a10 - a01, a00 + a11);
 }
 
-static float compute_moment(struct softbody_point *p,
-                            struct vec2 frame_center) {
-    float distance = math_vec2_distance(frame_center, p->pos);
-    float angle = math_vec2_angle(p->pos, frame_center);
-    float moment = math_vec2_length(p->force) * distance * sinf(angle);
-    return moment;
-}
-
-static float get_angle(struct softbody *b) {
-    // rotational engery
-    struct vec2 frame_center = softbody_get_pos(b, SOFTBODY_FRAME);
-    float moment = 0.0f;
-    for (int i = 0; i < b->points_count; i++) {
-        moment += compute_moment(&b->points[i], frame_center);
-    }
-    moment /= b->points_count;
-
-    // mass
-    float mass = 0.0f;
-    for (int i = 0; i < b->points_count; i++) {
-        mass += b->points[i].mass;
-    }
-
-    // printf("Moment %.4f\n", moment);
-    // printf("Mass: %.4f\n", mass);
-
-    return moment / mass;
-}
-
 static void softbody_update_frame(struct softbody *b) {
     b->frame_pos = softbody_get_pos(b, SOFTBODY_POS);
     b->frame_angle = softbody_compute_angle(b);
@@ -405,8 +376,6 @@ void softbody_draw(struct softbody *b) {
     for (int i = 0; i < b->points_count; i++) {
         renderer_push_circle(&render_context, b->points[i].pos, 15.0f,
                              (struct color3){0.5f, 0.9f, 0.2f});
-        renderer_push_circle(&render_context, b->frame_points[i].pos, 15.0f,
-                             (struct color3){0.9f, 0.9f, 0.2f});
     }
 }
 
@@ -417,8 +386,6 @@ void softbody_destroy(struct softbody *b) {
         free(b->springs);
     if (b->edges)
         free(b->edges);
-    if (b->frame_points)
-        free(b->frame_points);
 }
 
 struct vec2 softbody_get_pos(struct softbody *b, int type) {
@@ -433,10 +400,6 @@ struct vec2 softbody_get_pos(struct softbody *b, int type) {
         }
         break;
     case SOFTBODY_FRAME:
-        for (int i = 0; i < b->points_count; i++) {
-            x += b->frame_points[i].pos.x;
-            y += b->frame_points[i].pos.y;
-        }
         break;
     }
 
@@ -452,39 +415,13 @@ struct vec2 softbody_get_pos(struct softbody *b, int type) {
     return pos;
 }
 
-static struct vec2 compute_center(struct softbody *b, int type) {
-    float x = 0.0f, y = 0.0f;
-    int count = b->points_count;
-    for (int i = 0; i < count; i++) {
-        struct softbody_point *p =
-            type == SOFTBODY_POS ? &b->points[i] : &b->frame_points[i];
-        x += p->pos.x;
-        y += p->pos.y;
-    }
-    return (struct vec2){x / count, y / count};
-}
-
-static void update_pos(struct softbody *b, int type) {
-    struct vec2 current_center = compute_center(b, type);
-    struct vec2 target = type == SOFTBODY_POS ? b->pos : b->frame_pos;
-    struct vec2 offset = math_vec2_subtract(target, current_center);
-
-    for (int i = 0; i < b->points_count; i++) {
-        struct softbody_point *p =
-            type == SOFTBODY_POS ? &b->points[i] : &b->frame_points[i];
-        p->pos = math_vec2_add(p->pos, offset);
-    }
-}
-
 void softbody_set_pos(struct softbody *b, struct vec2 pos, int type) {
     switch (type) {
     case SOFTBODY_POS:
         b->pos = pos;
-        update_pos(b, SOFTBODY_POS);
         break;
     case SOFTBODY_FRAME:
         b->frame_pos = pos;
-        update_pos(b, SOFTBODY_FRAME);
         break;
     }
 }
