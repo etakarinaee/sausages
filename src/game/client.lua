@@ -74,9 +74,9 @@ function game_init()
     client = core.client.new(ip, port)
     core.print("connecting to " .. ip .. ":" .. port)
 
-    --softbody = core.create_softbody({310, 400}, {10, 10}, {0.8, 0.3, 0.0})
+    softbody = core.create_softbody({310, 400}, {10, 10}, {0.8, 0.3, 0.0})
     softbody_two = core.create_softbody({-100, 400}, {5, 10}, {0.1, 0.0, 1.0})
-    --softbody_ground = core.create_softbody({0, 0}, {25, 4}, {0.3, 0.7, 0.3})
+    softbody_ground = core.create_softbody({0, 0}, {25, 4}, {0.3, 0.7, 0.3})
 end
 
 local tick_rate = 1.0 / 120.0
@@ -86,12 +86,12 @@ function game_update(delta_time)
     core.voice.transmit(core.key_down(key.v))
     chat.update()
 
-   -- core.softbody_apply_force(softbody, {0, -1200})
+    core.softbody_apply_force(softbody, {0, -1200})
     core.softbody_apply_force(softbody_two, {0, -1200})
-    --core.update_softbody(softbody, delta_time, {0.8, 0.3, 0.0})
+    core.update_softbody(softbody, delta_time, {0.8, 0.3, 0.0})
     core.update_softbody(softbody_two, delta_time, {0.1, 0.0, 1.0})
-    --core.update_softbody(softbody_ground, delta_time, {0.3, 0.7, 0.3}) 
-   -- core.softbody_check_coll({softbody, softbody_two, softbody_ground})
+    core.update_softbody(softbody_ground, delta_time, {0.3, 0.7, 0.3}) 
+    core.softbody_check_coll({softbody, softbody_two, softbody_ground})
 
     local msg = chat.poll_outgoing()
     while msg do
@@ -201,9 +201,9 @@ function game_update(delta_time)
         core.push_text_ex(font, player.nickname, {player.x, player.y + 10}, 25, {1.0, 1.0, 1.0}, core.anchor.center)
     end
 
-    --core.draw_softbody(softbody)
+    core.draw_softbody(softbody)
     core.draw_softbody(softbody_two)
-    --core.draw_softbody(softbody_ground)
+    core.draw_softbody(softbody_ground)
 
     local pos = core.softbody_get_pos(softbody_two)
     core.push_circle({pos.x, pos.y}, 15, {1.0, 1.0, 1.0})

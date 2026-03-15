@@ -25,6 +25,15 @@ struct vec2 math_vec2_scale(struct vec2 v, float scalar) {
     return (struct vec2){v.x * scalar, v.y * scalar};
 }
 
+struct vec2 math_vec2_rotate(struct vec2 v, float angle) {
+    float c = cosf(angle);
+    float s = sinf(angle);
+    return (struct vec2){
+        .x = v.x * c - v.y * s,
+        .y = v.x * s + v.y * c,
+    };
+}
+
 float math_vec2_length(struct vec2 v) { return sqrtf(v.x * v.x + v.y * v.y); }
 
 struct vec2 math_vec2_norm(struct vec2 v) {

@@ -14,6 +14,7 @@ struct softbody_point {
     struct vec2 pos;
     struct vec2 vel;
     struct vec2 force;
+    struct vec2 rest_pos; /* offset from center at creation */
     float mass;
 };
 
@@ -43,6 +44,7 @@ struct softbody {
     struct edge *edges;
     struct softbody_point *frame_points;
 
+    float frame_angle;
     /* never use these directly they are only for caching the position */
     struct vec2 frame_pos;
     struct vec2 pos;
@@ -50,13 +52,12 @@ struct softbody {
     bool update_pos;
 
     struct vec2 force; /* acumalitive outside force acting on the hole object */
-
     struct vec2 size;
     struct mesh mesh;
 };
 
 struct softbody softbody_create_rect(struct vec2 pos, struct vec2 size,
-                                             struct color3 color);
+                                     struct color3 color);
 void softbody_update(struct softbody *b, float dt, struct color3 color);
 void softbody_check_coll(struct softbody *a, struct softbody *b);
 void softbody_apply_velocity(struct softbody *b, struct vec2 vel);

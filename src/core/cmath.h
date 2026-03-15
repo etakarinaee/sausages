@@ -33,6 +33,7 @@ float math_clamp(float n, float lower, float upper);
 struct vec2 math_vec2_add(struct vec2 a, struct vec2 b);
 struct vec2 math_vec2_subtract(struct vec2 a, struct vec2 b);
 struct vec2 math_vec2_scale(struct vec2 v, float scalar);
+struct vec2 math_vec2_rotate(struct vec2 v, float angle);
 
 float math_vec2_length(struct vec2 v);
 struct vec2 math_vec2_norm(struct vec2 v);

@@ -7,7 +7,6 @@
 // clang-format on
 
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 struct softbody softbody_create_rect(struct vec2 pos, struct vec2 size,
@@ -24,6 +23,8 @@ struct softbody softbody_create_rect(struct vec2 pos, struct vec2 size,
     b.damping = 3.0f;
     b.stiffness = 600.0f;
     b.size = size;
+    b.frame_angle = 0.0f;
+    b.frame_pos = pos;
 
     b.points_count = (int)(size.x * size.y);
     if (b.points_count < 2)
@@ -46,36 +47,22 @@ struct softbody softbody_create_rect(struct vec2 pos, struct vec2 size,
     b.edges = malloc(b.edges_count *
                      sizeof(struct edge)); /* quote cheescake: i love edging */
     int edge_idx = 0;
-
-    float half_x = size.x * 0.5f;
-    float half_y = size.y * 0.5f;
     int point_idx = 0;
 
     /* point init */
-    for (float y = -half_y; y < half_y; y += 1.0f) {
-        for (float x = -half_x; x < half_x; x += 1.0f) {
+    for (int yi = 0; yi < height; yi++) {
+        for (int xi = 0; xi < width; xi++) {
+            float x = (xi - (width - 1) * 0.5f) * rest_len;
+            float y = (yi - (height - 1) * 0.5f) * rest_len;
+
             b.points[point_idx] = (struct softbody_point){
                 .mass = 1,
-                .pos =
-                    {
-                        .x = pos.x + x * rest_len,
-                        .y = pos.y + y * rest_len,
-                    },
+                .pos = {.x = pos.x + x, .y = pos.y + y},
+                .rest_pos = {.x = x, .y = y},
             };
-
-            b.frame_points[point_idx] = (struct softbody_point){
-                .mass = 1,
-                .pos =
-                    {
-                        .x = pos.x + x * rest_len,
-                        .y = pos.y + y * rest_len,
-                    },
-            };
-
             point_idx++;
         }
     }
-
     int spring_idx = 0;
 
     /* spring init */
@@ -87,7 +74,7 @@ struct softbody softbody_create_rect(struct vec2 pos, struct vec2 size,
         b.springs[spring_idx++] = (struct spring){
             .rest_len = 0.0f,
             .start = i,
-            .end = i,
+            .end = i, /* doesnt metter because translate from point */
             .end_frame = true,
         };
 
@@ -175,50 +162,62 @@ struct softbody softbody_create_rect(struct vec2 pos, struct vec2 size,
 static void apply_spring_forces(struct softbody *b, struct spring *s) {
     struct softbody_point *start = &b->points[s->start];
 
-    struct softbody_point *end =
-        s->end_frame ? &b->frame_points[s->end] : &b->points[s->end];
+    if (s->end_frame) {
+        struct vec2 target = math_vec2_add(
+            b->frame_pos, math_vec2_rotate(start->rest_pos, b->frame_angle));
 
+        struct vec2 delta = math_vec2_subtract(target, start->pos);
+        float dist = math_vec2_length(delta);
+        if (dist < 0.0001f)
+            return;
+
+        struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
+        float f_spring = dist * b->stiffness * 0.7f;
+        struct vec2 spring_f = math_vec2_scale(norm, f_spring);
+
+        float rel_vel_along = -math_vec2_dot(start->vel, norm);
+        struct vec2 damp_f =
+            math_vec2_scale(norm, rel_vel_along * b->damping * 6.0f);
+
+        start->force =
+            math_vec2_add(start->force, math_vec2_add(spring_f, damp_f));
+        return;
+    }
+
+    struct softbody_point *end = &b->points[s->end];
     struct vec2 delta = math_vec2_subtract(end->pos, start->pos);
     float dist = math_vec2_length(delta);
     if (dist < 0.0001f)
         return;
 
     struct vec2 norm = math_vec2_scale(delta, 1.0f / dist);
-
-    float stiff_coef =
-        s->end_frame ? 0.7f : 1.0f; /* not as strong springs for frame */
-    float damp_coef = s->end_frame ? 6.0f : 1.0f;
-    float f_spring = (dist - s->rest_len) * b->stiffness * stiff_coef;
+    float f_spring = (dist - s->rest_len) * b->stiffness;
     struct vec2 spring_f = math_vec2_scale(norm, f_spring);
 
     float rel_vel_along =
         math_vec2_dot(math_vec2_subtract(end->vel, start->vel), norm);
-    struct vec2 damp_f =
-        math_vec2_scale(norm, rel_vel_along * b->damping * damp_coef);
+    struct vec2 damp_f = math_vec2_scale(norm, rel_vel_along * b->damping);
 
     struct vec2 total = math_vec2_add(spring_f, damp_f);
     start->force = math_vec2_add(start->force, total);
-    if (!s->end_frame)
-        end->force = math_vec2_subtract(end->force, total);
+    end->force = math_vec2_subtract(end->force, total);
 }
 
 static float softbody_compute_angle(struct softbody *b) {
-    struct vec2 frame_center = softbody_get_pos(b, SOFTBODY_FRAME);
     struct vec2 sim_center = softbody_get_pos(b, SOFTBODY_POS);
 
     float a00 = 0.0f, a01 = 0.0f, a10 = 0.0f, a11 = 0.0f;
     for (int i = 0; i < b->points_count; i++) {
         struct vec2 p = math_vec2_subtract(b->points[i].pos, sim_center);
         struct vec2 q =
-            math_vec2_subtract(b->frame_points[i].pos, frame_center);
+            b->points[i].rest_pos; // original offsets, no center needed
         a00 += p.x * q.x;
         a01 += p.x * q.y;
         a10 += p.y * q.x;
         a11 += p.y * q.y;
     }
 
-    float angle = atan2f(a10 - a01, a00 + a11);
-    return angle;
+    return atan2f(a10 - a01, a00 + a11);
 }
 
 static float compute_moment(struct softbody_point *p,
@@ -250,24 +249,9 @@ static float get_angle(struct softbody *b) {
     return moment / mass;
 }
 
-static void softbody_transform_frame(struct softbody *b) {
-    float angle = softbody_compute_angle(b);
-    struct vec2 frame_center = softbody_get_pos(b, SOFTBODY_FRAME);
-    struct vec2 sim_center = softbody_get_pos(b, SOFTBODY_POS);
-
-    for (int i = 0; i < b->points_count; i++) {
-        struct vec2 *p = &b->frame_points[i].pos;
-        struct vec2 delta = math_vec2_subtract(*p, frame_center);
-
-        float angle1 = get_angle(b);
-        // printf("Angle: %.4f\n", angle1);
-
-        struct matrix m;
-        math_matrix_rotate_2d(&m, angle);
-        delta = math_vec2_mul_matrix(delta, &m);
-
-        *p = math_vec2_add(frame_center, delta);
-    }
+static void softbody_update_frame(struct softbody *b) {
+    b->frame_pos = softbody_get_pos(b, SOFTBODY_POS);
+    b->frame_angle = softbody_compute_angle(b);
 }
 
 static inline void softbody_update_point(struct softbody_point *p, float dt) {
@@ -301,10 +285,9 @@ void softbody_update(struct softbody *b, float dt, struct color3 color) {
     const int substeps = 8;
     const float sub_dt = dt / substeps;
     for (int s = 0; s < substeps; s++) {
+        softbody_update_frame(b);
         softbody_update_substep(b, sub_dt);
     }
-
-    softbody_transform_frame(b);
 
     float vertices[b->points_count * 2];
 
