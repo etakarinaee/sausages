@@ -6,11 +6,12 @@
 #include "renderer.h"
 // clang-format on
 
+#include <complex.h>
 #include <math.h>
 #include <stdlib.h>
 
 struct softbody softbody_create_rect(struct vec2 pos, struct vec2 size,
-                                     struct color3 color) {
+                                     struct color3 color, int type) {
     struct softbody b;
 
     int width = (int)size.x;
@@ -59,6 +60,12 @@ struct softbody softbody_create_rect(struct vec2 pos, struct vec2 size,
                 .pos = {.x = pos.x + x, .y = pos.y + y},
                 .rest_pos = {.x = x, .y = y},
             };
+
+            if (type == SOFTBODY_EDGE_STATIC && (xi == 0 || xi == width - 1)) {
+                b.points[point_idx].is_static = true;
+            } else if (type == SOFTBODY_STATIC) {
+                b.points[point_idx].is_static = true;
+            }
             point_idx++;
         }
     }
@@ -208,8 +215,7 @@ static float softbody_compute_angle(struct softbody *b) {
     float a00 = 0.0f, a01 = 0.0f, a10 = 0.0f, a11 = 0.0f;
     for (int i = 0; i < b->points_count; i++) {
         struct vec2 p = math_vec2_subtract(b->points[i].pos, sim_center);
-        struct vec2 q =
-            b->points[i].rest_pos; // original offsets, no center needed
+        struct vec2 q = b->points[i].rest_pos;
         a00 += p.x * q.x;
         a01 += p.x * q.y;
         a10 += p.y * q.x;
@@ -228,15 +234,7 @@ static void softbody_update_frame(struct softbody *b) {
 static inline void softbody_update_point(struct softbody_point *p, float dt) {
     p->vel = math_vec2_add(p->vel, math_vec2_scale(p->force, dt / p->mass));
     p->pos = math_vec2_add(p->pos, math_vec2_scale(p->vel, dt));
-
-    /* TODO: make this not hardcoded */
-    if (coll_check_point_rect(p->pos, (struct vec2){-400, -50},
-                              (struct vec2){800, 100})) {
-        p->pos.y = 50.0f;
-        p->vel.y *= -0.3f;
-    }
-
-    p->vel = math_vec2_scale(p->vel, 0.999f);
+    p->vel = math_vec2_scale(p->vel, 0.995f);
 }
 
 void softbody_update_substep(struct softbody *b, float dt) {
@@ -246,8 +244,12 @@ void softbody_update_substep(struct softbody *b, float dt) {
     for (int i = 0; i < b->springs_count; i++) {
         apply_spring_forces(b, &b->springs[i]);
     }
-
     for (int i = 0; i < b->points_count; i++) {
+        if (b->points[i].is_static) {
+            b->points[i].force = (struct vec2){0.0f, 0.0f};
+            b->points[i].vel = (struct vec2){0.0f, 0.0f};
+            continue;
+        }
         softbody_update_point(&b->points[i], dt);
     }
 }
@@ -335,10 +337,16 @@ void softbody_check_coll(struct softbody *a, struct softbody *b) {
             struct vec2 v_normal = math_vec2_scale(normal, vn);
             struct vec2 v_tangent = math_vec2_subtract(a_p->vel, v_normal);
 
-            a_p->pos = math_vec2_add(a_p->pos, push);
-            end->pos = math_vec2_subtract(end->pos, math_vec2_scale(push, t));
-            start->pos =
-                math_vec2_add(start->pos, math_vec2_scale(push, 1.0f - t));
+            /* TODO: change when actually point is static than just not moving
+             * it */
+            if (!a_p->is_static)
+                a_p->pos = math_vec2_add(a_p->pos, push);
+            if (!end->is_static)
+                end->pos =
+                    math_vec2_subtract(end->pos, math_vec2_scale(push, t));
+            if (!start->is_static)
+                start->pos =
+                    math_vec2_add(start->pos, math_vec2_scale(push, 1.0f - t));
 
             struct vec2 v_new =
                 math_vec2_subtract(v_tangent, math_vec2_scale(v_normal, e));

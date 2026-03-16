@@ -6,8 +6,9 @@
 #include "renderer.h"
 
 enum {
-    SOFTBODY_POS,
-    SOFTBODY_FRAME,
+    SOFTBODY_NORMAL,
+    SOFTBODY_EDGE_STATIC, /* only endpoints (left and right) static */
+    SOFTBODY_STATIC,      /* everythign static */
 };
 
 struct softbody_point {
@@ -16,6 +17,7 @@ struct softbody_point {
     struct vec2 force;
     struct vec2 rest_pos; /* offset from center at creation */
     float mass;
+    bool is_static; /* not moveable */
 };
 
 struct spring {
@@ -55,7 +57,7 @@ struct softbody {
 };
 
 struct softbody softbody_create_rect(struct vec2 pos, struct vec2 size,
-                                     struct color3 color);
+                                     struct color3 color, int type);
 void softbody_update(struct softbody *b, float dt, struct color3 color);
 void softbody_check_coll(struct softbody *a, struct softbody *b);
 void softbody_apply_velocity(struct softbody *b, struct vec2 vel);

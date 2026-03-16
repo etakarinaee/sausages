@@ -303,10 +303,11 @@ static int l_create_softbody(lua_State *L) {
     const struct vec2 pos = check_vec2(L, 1);
     const struct vec2 size = check_vec2(L, 2);
     const struct color3 color = check_color3(L, 3);
+    const int type = luaL_checkinteger(L, 4);
 
     int handle = game_context.soft_bodies_index;
     game_context.soft_bodies[game_context.soft_bodies_index++] =
-        softbody_create_rect(pos, size, color);
+        softbody_create_rect(pos, size, color, type);
     lua_pushinteger(L, handle);
     return 1;
 }
