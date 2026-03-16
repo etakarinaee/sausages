@@ -357,7 +357,7 @@ static int l_softbody_check_coll(lua_State *L) {
                 continue;
             int b = handles[j];
             softbody_check_coll(&game_context.soft_bodies[a],
-                                    &game_context.soft_bodies[b]);
+                                &game_context.soft_bodies[b]);
         }
     }
 
@@ -382,8 +382,7 @@ static int l_destroy_softbody(lua_State *L) {
 
 static int l_softbody_get_pos(lua_State *L) {
     const int handle = luaL_checknumber(L, 1);
-    struct vec2 pos = softbody_get_pos(&game_context.soft_bodies[handle],
-                                           SOFTBODY_FRAME);
+    struct vec2 pos = softbody_get_pos(&game_context.soft_bodies[handle]);
 
     lua_newtable(L);
     lua_pushinteger(L, pos.x);
@@ -398,8 +397,7 @@ static int l_softbody_get_pos(lua_State *L) {
 static int l_softbody_set_pos(lua_State *L) {
     const int handle = luaL_checknumber(L, 1);
     struct vec2 pos = check_vec2(L, 2);
-    softbody_set_pos(&game_context.soft_bodies[handle], pos,
-                         SOFTBODY_FRAME);
+    softbody_set_pos(&game_context.soft_bodies[handle], pos);
 
     return 0;
 }

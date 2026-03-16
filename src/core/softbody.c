@@ -25,14 +25,13 @@ struct softbody softbody_create_rect(struct vec2 pos, struct vec2 size,
     b.size = size;
     b.frame_angle = 0.0f;
     b.frame_pos = pos;
+    b.update_pos = true;
 
     b.points_count = (int)(size.x * size.y);
     if (b.points_count < 2)
         return b;
 
     b.points = malloc(b.points_count * sizeof(struct softbody_point));
-
-    b.frame_points = malloc(b.points_count * sizeof(struct softbody_point));
 
     int springs_horizontal = (width - 1) * height;
     int springs_vertical = width * (height - 1);
@@ -204,7 +203,7 @@ static void apply_spring_forces(struct softbody *b, struct spring *s) {
 }
 
 static float softbody_compute_angle(struct softbody *b) {
-    struct vec2 sim_center = softbody_get_pos(b, SOFTBODY_POS);
+    struct vec2 sim_center = softbody_get_pos(b);
 
     float a00 = 0.0f, a01 = 0.0f, a10 = 0.0f, a11 = 0.0f;
     for (int i = 0; i < b->points_count; i++) {
@@ -221,7 +220,8 @@ static float softbody_compute_angle(struct softbody *b) {
 }
 
 static void softbody_update_frame(struct softbody *b) {
-    b->frame_pos = softbody_get_pos(b, SOFTBODY_POS);
+    if (b->update_pos)
+        b->frame_pos = softbody_get_pos(b);
     b->frame_angle = softbody_compute_angle(b);
 }
 
@@ -269,6 +269,7 @@ void softbody_update(struct softbody *b, float dt, struct color3 color) {
 
     renderer_update_mesh(&b->mesh, vertices, b->points_count, color);
     b->force = (struct vec2){0, 0};
+    b->update_pos = true;
 }
 
 static struct vec2 closest_point_on_line(struct vec2 start, struct vec2 end,
@@ -388,40 +389,25 @@ void softbody_destroy(struct softbody *b) {
         free(b->edges);
 }
 
-struct vec2 softbody_get_pos(struct softbody *b, int type) {
+struct vec2 softbody_get_pos(struct softbody *b) {
     float x = 0.0f;
     float y = 0.0f;
 
-    switch (type) {
-    case SOFTBODY_POS:
-        for (int i = 0; i < b->points_count; i++) {
-            x += b->points[i].pos.x;
-            y += b->points[i].pos.y;
-        }
-        break;
-    case SOFTBODY_FRAME:
-        break;
+    if (!b->update_pos)
+        return b->frame_pos;
+    for (int i = 0; i < b->points_count; i++) {
+        x += b->points[i].pos.x;
+        y += b->points[i].pos.y;
     }
 
     x /= b->points_count;
     y /= b->points_count;
 
     struct vec2 pos = (struct vec2){x, y};
-    struct vec2 *change = type == SOFTBODY_POS ? &b->pos : &b->frame_pos;
-    bool *update = type == SOFTBODY_POS ? &b->update_pos : &b->update_frame_pos;
-    *change = pos;
-    *update = false;
-
     return pos;
 }
 
-void softbody_set_pos(struct softbody *b, struct vec2 pos, int type) {
-    switch (type) {
-    case SOFTBODY_POS:
-        b->pos = pos;
-        break;
-    case SOFTBODY_FRAME:
-        b->frame_pos = pos;
-        break;
-    }
+void softbody_set_pos(struct softbody *b, struct vec2 pos) {
+    b->frame_pos = pos;
+    b->update_pos = false;
 }

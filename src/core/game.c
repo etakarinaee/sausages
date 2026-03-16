@@ -16,8 +16,12 @@ void game_init(void) {
 }
 
 void game_deinit(void) {
-    if (game_context.soft_bodies)
+    if (game_context.soft_bodies) {
+        for (int i = 0; i < game_context.soft_bodies_index; i++) {
+            softbody_destroy(&game_context.soft_bodies[i]);
+        }
         free(game_context.soft_bodies);
+    }
     if (game_context.meshs)
         free(game_context.meshs);
 }

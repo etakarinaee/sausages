@@ -47,8 +47,6 @@ struct softbody {
     float frame_angle;
     /* never use these directly they are only for caching the position */
     struct vec2 frame_pos;
-    struct vec2 pos;
-    bool update_frame_pos; /* true when position need to be pulled again */
     bool update_pos;
 
     struct vec2 force; /* acumalitive outside force acting on the hole object */
@@ -65,7 +63,7 @@ void softbody_apply_force(struct softbody *b, struct vec2 force);
 void softbody_draw(struct softbody *b);
 void softbody_destroy(struct softbody *b);
 
-struct vec2 softbody_get_pos(struct softbody *b, int type);
-void softbody_set_pos(struct softbody *b, struct vec2 pos, int type);
+struct vec2 softbody_get_pos(struct softbody *b);
+void softbody_set_pos(struct softbody *b, struct vec2 pos);
 
 #endif // softbody_H
