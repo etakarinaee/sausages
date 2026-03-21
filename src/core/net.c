@@ -2,12 +2,13 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
-#include <time.h>
-#include <sys/socket.h>
-#include <unistd.h>
 #include <netdb.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <time.h>
+#include <unistd.h>
 
 #define HEADER 5
 
@@ -22,7 +23,7 @@ enum {
 static double net_time(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (double) ts.tv_sec + (double) ts.tv_nsec * 1e-9;
+    return (double)ts.tv_sec + (double)ts.tv_nsec * 1e-9;
 }
 
 static int udp_sock(const char *ip, const uint16_t port) {
@@ -34,7 +35,7 @@ static int udp_sock(const char *ip, const uint16_t port) {
         return -1;
     }
 
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *) &opt, sizeof(opt));
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt));
     if ((fl = fcntl(fd, F_GETFL, 0)) >= 0) {
         fcntl(fd, F_SETFL, fl | O_NONBLOCK);
     }
@@ -46,7 +47,7 @@ static int udp_sock(const char *ip, const uint16_t port) {
             .sin_addr.s_addr = ip ? inet_addr(ip) : INADDR_ANY,
         };
 
-        if (bind(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
             close(fd);
 
             return -1;
@@ -56,7 +57,8 @@ static int udp_sock(const char *ip, const uint16_t port) {
     return fd;
 }
 
-static uint32_t resolve(const char *host, const uint16_t port, struct net_addr *addr) {
+static uint32_t resolve(const char *host, const uint16_t port,
+                        struct net_addr *addr) {
     const struct addrinfo hints = {
         .ai_family = AF_INET,
         .ai_socktype = SOCK_DGRAM,
@@ -68,29 +70,31 @@ static uint32_t resolve(const char *host, const uint16_t port, struct net_addr *
     }
 
     *addr = (struct net_addr){
-        .host = ((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr,
-        .port = htons(port)
-    };
+        .host = ((struct sockaddr_in *)res->ai_addr)->sin_addr.s_addr,
+        .port = htons(port)};
     freeaddrinfo(res);
 
     return 1;
 }
 
-static void udp_send(const int fd, const struct net_addr *to, const void *data, const uint32_t len) {
+static void udp_send(const int fd, const struct net_addr *to, const void *data,
+                     const uint32_t len) {
     struct sockaddr_in addr = {
         .sin_family = AF_INET,
         .sin_port = to->port,
         .sin_addr.s_addr = to->host,
     };
 
-    sendto(fd, data, len, 0, (struct sockaddr *) &addr, sizeof(addr));
+    sendto(fd, data, len, 0, (struct sockaddr *)&addr, sizeof(addr));
 }
 
-static int udp_recv(const int fd, struct net_addr *from, void *buf, const uint32_t max) {
+static int udp_recv(const int fd, struct net_addr *from, void *buf,
+                    const uint32_t max) {
     struct sockaddr_in addr;
     socklen_t alen = sizeof(addr);
 
-    const int n = (int) recvfrom(fd, buf, max, 0, (struct sockaddr *) &addr, &alen);
+    const int n =
+        (int)recvfrom(fd, buf, max, 0, (struct sockaddr *)&addr, &alen);
     if (n <= 0) {
         return -1;
     }
@@ -105,11 +109,11 @@ static int udp_recv(const int fd, struct net_addr *from, void *buf, const uint32
 
 static void packet_pack(uint8_t *buf, const uint32_t type) {
     const uint32_t id = NET_PROTOCOL_ID;
-    buf[0] = (uint8_t) id;
-    buf[1] = (uint8_t) (id >> 8);
-    buf[2] = (uint8_t) (id >> 16);
-    buf[3] = (uint8_t) (id >> 24);
-    buf[4] = (uint8_t) type;
+    buf[0] = (uint8_t)id;
+    buf[1] = (uint8_t)(id >> 8);
+    buf[2] = (uint8_t)(id >> 16);
+    buf[3] = (uint8_t)(id >> 24);
+    buf[4] = (uint8_t)type;
 }
 
 static uint32_t packet_check(const uint8_t *buf, const int n, uint32_t *type) {
@@ -117,7 +121,8 @@ static uint32_t packet_check(const uint8_t *buf, const int n, uint32_t *type) {
         return 0;
     }
 
-    const uint32_t id = buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24);
+    const uint32_t id =
+        buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24);
     if (id != NET_PROTOCOL_ID) {
         return 0;
     }
@@ -127,13 +132,15 @@ static uint32_t packet_check(const uint8_t *buf, const int n, uint32_t *type) {
     return 1;
 }
 
-static void packet_send(const int fd, const struct net_addr *to, const uint32_t type) {
+static void packet_send(const int fd, const struct net_addr *to,
+                        const uint32_t type) {
     uint8_t buf[HEADER];
     packet_pack(buf, type);
     udp_send(fd, to, buf, HEADER);
 }
 
-static void send_acknowledgment(const int fd, const struct net_addr *to, const uint32_t id) {
+static void send_acknowledgment(const int fd, const struct net_addr *to,
+                                const uint32_t id) {
     uint8_t buf[HEADER + 4];
     packet_pack(buf, PACKET_CONNECT_ACKNOWLEDGMENT);
     buf[5] = id & 0xff;
@@ -148,7 +155,8 @@ static uint32_t addr_eq(const struct net_addr *a, const struct net_addr *b) {
     return a->host == b->host && a->port == b->port;
 }
 
-static uint32_t peer_find(const struct net_server *server, const struct net_addr *addr) {
+static uint32_t peer_find(const struct net_server *server,
+                          const struct net_addr *addr) {
     for (uint32_t i = 0; i < server->max_clients; i++) {
         if (server->peers[i].alive && addr_eq(&server->peers[i].addr, addr)) {
             return i;
@@ -174,7 +182,8 @@ void net_set_voice_callback(const net_voice_recv_fn callback) {
     voice_recv_callback = callback;
 }
 
-struct net_server *net_server_create(const char *ip, const uint16_t port, uint32_t n) {
+struct net_server *net_server_create(const char *ip, const uint16_t port,
+                                     uint32_t n) {
     if (n < 1) {
         n = 1;
     }
@@ -234,10 +243,12 @@ uint32_t net_server_poll(struct net_server *server, struct net_event *event) {
     uint32_t type, id;
 
     if (t - server->last_sweep > 1.0) {
-        for (; server->sweep_index < server->max_clients; server->sweep_index++) {
+        for (; server->sweep_index < server->max_clients;
+             server->sweep_index++) {
             id = server->sweep_index;
 
-            if (server->peers[id].alive && t - server->peers[id].last_recv > NET_TIMEOUT) {
+            if (server->peers[id].alive &&
+                t - server->peers[id].last_recv > NET_TIMEOUT) {
                 server->peers[id].alive = false;
                 server->n--;
                 server->sweep_index++;
@@ -292,7 +303,6 @@ uint32_t net_server_poll(struct net_server *server, struct net_event *event) {
         return 1;
     }
 
-
     if (type == PACKET_DISCONNECT) {
         id = peer_find(server, &from);
         if (id == UINT32_MAX) {
@@ -311,7 +321,6 @@ uint32_t net_server_poll(struct net_server *server, struct net_event *event) {
         return 1;
     }
 
-
     if (type == PACKET_DATA) {
         id = peer_find(server, &from);
         if (id == UINT32_MAX) {
@@ -320,7 +329,7 @@ uint32_t net_server_poll(struct net_server *server, struct net_event *event) {
 
         server->peers[id].last_recv = t;
 
-        const uint32_t payload = (uint32_t) (n - HEADER);
+        const uint32_t payload = (uint32_t)(n - HEADER);
 
         *event = (struct net_event){
             .type = NET_EVENT_DATA,
@@ -343,12 +352,12 @@ uint32_t net_server_poll(struct net_server *server, struct net_event *event) {
 
         uint8_t relay[HEADER + 4 + NET_PAYLOAD];
         packet_pack(relay, PACKET_VOICE);
-        relay[5] = (uint8_t) (id);
-        relay[6] = (uint8_t) (id >> 8);
-        relay[7] = (uint8_t) (id >> 16);
-        relay[8] = (uint8_t) (id >> 24);
+        relay[5] = (uint8_t)(id);
+        relay[6] = (uint8_t)(id >> 8);
+        relay[7] = (uint8_t)(id >> 16);
+        relay[8] = (uint8_t)(id >> 24);
 
-        const uint32_t payload = (uint32_t) (n - HEADER);
+        const uint32_t payload = (uint32_t)(n - HEADER);
         if (payload > 0 && payload <= NET_PAYLOAD) {
             memcpy(relay + HEADER + 4, buf + HEADER, payload);
         }
@@ -365,7 +374,8 @@ uint32_t net_server_poll(struct net_server *server, struct net_event *event) {
     return 0;
 }
 
-void net_server_send(const struct net_server *server, uint32_t client_id, const void *data, uint32_t len) {
+void net_server_send(const struct net_server *server, uint32_t client_id,
+                     const void *data, uint32_t len) {
     if (client_id >= server->max_clients || !server->peers[client_id].alive) {
         return;
     }
@@ -381,8 +391,10 @@ void net_server_send(const struct net_server *server, uint32_t client_id, const 
     udp_send(server->fd, &server->peers[client_id].addr, buf, HEADER + len);
 }
 
-void net_server_broadcast(const struct net_server *server, const void *data, uint32_t len) {
-    if (len > NET_PAYLOAD) len = NET_PAYLOAD;
+void net_server_broadcast(const struct net_server *server, const void *data,
+                          uint32_t len) {
+    if (len > NET_PAYLOAD)
+        len = NET_PAYLOAD;
 
     uint8_t buf[HEADER + NET_PAYLOAD];
     packet_pack(buf, PACKET_DATA);
@@ -451,17 +463,18 @@ uint32_t net_client_poll(struct net_client *client, struct net_event *event) {
     const double t = net_time();
     uint32_t type;
 
-    if (client->connecting && !client->connected && t - client->last_attempt > 1.0) {
+    if (client->connecting && !client->connected &&
+        t - client->last_attempt > 1.0) {
         packet_send(client->fd, &client->server, PACKET_CONNECT);
         client->last_attempt = t;
     }
 
     const int n = udp_recv(client->fd, &from, buf, sizeof(buf));
 
-    if (n < 0 || !packet_check(buf, n, &type) || !addr_eq(&from, &client->server)) {
+    if (n < 0 || !packet_check(buf, n, &type) ||
+        !addr_eq(&from, &client->server)) {
         return 0;
     }
-
 
     if (type == PACKET_CONNECT_ACKNOWLEDGMENT) {
         if (client->connected) {
@@ -472,8 +485,9 @@ uint32_t net_client_poll(struct net_client *client, struct net_event *event) {
         client->connecting = false;
 
         client->id = n >= HEADER + 4
-                         ? (uint32_t) buf[5] | ((uint32_t) buf[6] << 8) | ((uint32_t) buf[7] << 16) | (
-                               (uint32_t) buf[8] << 24)
+                         ? (uint32_t)buf[5] | ((uint32_t)buf[6] << 8) |
+                               ((uint32_t)buf[7] << 16) |
+                               ((uint32_t)buf[8] << 24)
                          : 0;
 
         *event = (struct net_event){
@@ -501,7 +515,7 @@ uint32_t net_client_poll(struct net_client *client, struct net_event *event) {
             return 0;
         }
 
-        const uint32_t payload = (uint32_t) (n - HEADER);
+        const uint32_t payload = (uint32_t)(n - HEADER);
 
         *event = (struct net_event){
             .type = NET_EVENT_DATA,
@@ -518,12 +532,15 @@ uint32_t net_client_poll(struct net_client *client, struct net_event *event) {
             return 0;
         }
 
-        const uint32_t sender = (uint32_t) buf[5] | ((uint32_t) buf[6] << 8) |
-                          ((uint32_t) buf[7] << 16) | ((uint32_t) buf[8] << 24);
-        const int payload_len = n - HEADER - 4;
+        const uint32_t sender = (uint32_t)buf[5] | ((uint32_t)buf[6] << 8) |
+                                ((uint32_t)buf[7] << 16) |
+                                ((uint32_t)buf[8] << 24);
+        const struct vec2 pos = *(struct vec2 *)(buf + HEADER + 4);
+        const int payload_len = n - HEADER - 4 - sizeof(pos);
 
         if (voice_recv_callback && payload_len > 0) {
-            voice_recv_callback(sender, buf + HEADER + 4, payload_len);
+            voice_recv_callback(sender, buf + HEADER + 4 + sizeof(pos),
+                                payload_len, pos);
         }
 
         return 0;
@@ -532,12 +549,14 @@ uint32_t net_client_poll(struct net_client *client, struct net_event *event) {
     return 0;
 }
 
-void net_client_send(const struct net_client *client, const void *data, uint32_t len) {
+void net_client_send(const struct net_client *client, const void *data,
+                     uint32_t len) {
     if (!client->connected) {
         return;
     }
 
-    if (len > NET_PAYLOAD) len = NET_PAYLOAD;
+    if (len > NET_PAYLOAD)
+        len = NET_PAYLOAD;
 
     uint8_t buf[HEADER + NET_PAYLOAD];
 
@@ -546,17 +565,23 @@ void net_client_send(const struct net_client *client, const void *data, uint32_t
     udp_send(client->fd, &client->server, buf, HEADER + len);
 }
 
-void net_client_send_voice(const struct net_client *client, const void *data, uint32_t len) {
+void net_client_send_voice(const struct net_client *client, const void *data,
+                           uint32_t len, struct vec2 pos) {
     if (!client || !client->connected) {
         return;
     }
 
-    if (len > NET_PAYLOAD) {
-        len = NET_PAYLOAD;
+    uint32_t new_len = len + sizeof(pos);
+
+    if (new_len > NET_PAYLOAD) {
+        new_len = NET_PAYLOAD;
     }
 
     uint8_t buf[HEADER + NET_PAYLOAD];
     packet_pack(buf, PACKET_VOICE);
-    memcpy(buf + HEADER, data, len);
-    udp_send(client->fd, &client->server, buf, HEADER + len);
+    memcpy(buf + sizeof(pos) + HEADER, data, len);
+
+    *(struct vec2 *)(buf + HEADER) = pos;
+
+    udp_send(client->fd, &client->server, buf, HEADER + new_len);
 }

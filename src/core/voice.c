@@ -1,6 +1,5 @@
 #include "voice.h"
 
-
 #ifndef SERVER
 
 #define MINIAUDIO_IMPLEMENTATION
@@ -50,6 +49,7 @@ static struct {
 
     struct voice_peer peers[PEERS];
     struct net_client *client;
+    struct vec2 pos;
 
     bool alive;
     bool muted;
@@ -57,11 +57,12 @@ static struct {
     float volume;
 } voice;
 
-static void capture_callback(ma_device *device, void *output, const void *input, const ma_uint32 n) {
-    (void) device;
-    (void) output;
+static void capture_callback(ma_device *device, void *output, const void *input,
+                             const ma_uint32 n) {
+    (void)device;
+    (void)output;
 
-    const int16_t *samples = (const int16_t *) input;
+    const int16_t *samples = (const int16_t *)input;
     uint32_t write = __atomic_load_n(&voice.capture_write, __ATOMIC_RELAXED);
 
     for (ma_uint32 i = 0; i < n; i++) {
@@ -72,11 +73,13 @@ static void capture_callback(ma_device *device, void *output, const void *input,
     __atomic_store_n(&voice.capture_write, write, __ATOMIC_RELEASE);
 }
 
-static void playback_callback(ma_device *device, void *output, const void *input, const ma_uint32 n) {
-    (void) device;
-    (void) output;
+static void playback_callback(ma_device *device, void *output,
+                              const void *input, const ma_uint32 n) {
+    (void)device;
+    (void)output;
+    (void)input;
 
-    int16_t *destination = (int16_t *) output;
+    int16_t *destination = (int16_t *)output;
     memset(destination, 0, n * sizeof(int16_t));
 
     for (int peer = 0; peer < PEERS; peer++) {
@@ -84,12 +87,16 @@ static void playback_callback(ma_device *device, void *output, const void *input
             continue;
         }
 
-        uint32_t read = __atomic_load_n(&voice.peers[peer].buffer_read, __ATOMIC_RELAXED);
-        const uint32_t write = __atomic_load_n(&voice.peers[peer].buffer_write, __ATOMIC_ACQUIRE);
+        uint32_t read =
+            __atomic_load_n(&voice.peers[peer].buffer_read, __ATOMIC_RELAXED);
+        const uint32_t write =
+            __atomic_load_n(&voice.peers[peer].buffer_write, __ATOMIC_ACQUIRE);
 
         for (ma_uint32 i = 0; i < n && read < write; i++, read++) {
-            int32_t sample = (int32_t) destination[i] + (int32_t) (
-                                 voice.peers[peer].buffer[read % PLAYBACK_RING] * voice.volume);
+            int32_t sample =
+                (int32_t)destination[i] +
+                (int32_t)(voice.peers[peer].buffer[read % PLAYBACK_RING] *
+                          voice.volume);
             if (sample > 32767) {
                 sample = 32767;
             }
@@ -97,9 +104,10 @@ static void playback_callback(ma_device *device, void *output, const void *input
                 sample = -32767;
             }
 
-            destination[i] = (int16_t) sample;
+            destination[i] = (int16_t)sample;
         }
-        __atomic_store_n(&voice.peers[peer].buffer_read, read, __ATOMIC_RELAXED);
+        __atomic_store_n(&voice.peers[peer].buffer_read, read,
+                         __ATOMIC_RELAXED);
     }
 }
 
@@ -108,7 +116,8 @@ int voice_init(void) {
     memset(&voice, 0, sizeof(voice));
     voice.volume = 1.f;
 
-    OpusEncoder *opus_encoder = opus_encoder_create(SAMPLE_RATE, CHANNELS, OPUS_APPLICATION_VOIP, &err);
+    OpusEncoder *opus_encoder =
+        opus_encoder_create(SAMPLE_RATE, CHANNELS, OPUS_APPLICATION_VOIP, &err);
 
     if (err != OPUS_OK || !opus_encoder) {
         fprintf(stderr, "opus encoder: %s\n", opus_strerror(err));
@@ -118,28 +127,32 @@ int voice_init(void) {
     opus_encoder_ctl(opus_encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
     voice.opus_encoder = opus_encoder;
 
-    ma_device_config capture_device = ma_device_config_init(ma_device_type_capture);
+    ma_device_config capture_device =
+        ma_device_config_init(ma_device_type_capture);
     capture_device.capture.format = ma_format_s16;
     capture_device.capture.channels = CHANNELS;
     capture_device.sampleRate = SAMPLE_RATE;
     capture_device.dataCallback = capture_callback;
     capture_device.periodSizeInFrames = FRAME_SIZE;
 
-    if (ma_device_init(NULL, &capture_device, &voice.capture_device) != MA_SUCCESS) {
+    if (ma_device_init(NULL, &capture_device, &voice.capture_device) !=
+        MA_SUCCESS) {
         fprintf(stderr, "capture device\n");
         opus_encoder_destroy(opus_encoder);
 
         return -1;
     }
 
-    ma_device_config playback_device = ma_device_config_init(ma_device_type_playback);
+    ma_device_config playback_device =
+        ma_device_config_init(ma_device_type_playback);
     playback_device.playback.format = ma_format_s16;
     playback_device.playback.channels = CHANNELS;
     playback_device.sampleRate = SAMPLE_RATE;
     playback_device.dataCallback = playback_callback;
     playback_device.periodSizeInFrames = FRAME_SIZE;
 
-    if (ma_device_init(NULL, &playback_device, &voice.playback_device) != MA_SUCCESS) {
+    if (ma_device_init(NULL, &playback_device, &voice.playback_device) !=
+        MA_SUCCESS) {
         fprintf(stderr, "playback device\n");
         ma_device_uninit(&voice.capture_device);
         opus_encoder_destroy(opus_encoder);
@@ -147,7 +160,8 @@ int voice_init(void) {
         return -1;
     }
 
-    if (ma_device_start(&voice.capture_device) != MA_SUCCESS || ma_device_start(&voice.playback_device) != MA_SUCCESS) {
+    if (ma_device_start(&voice.capture_device) != MA_SUCCESS ||
+        ma_device_start(&voice.playback_device) != MA_SUCCESS) {
         fprintf(stderr, "start audio device\n");
         ma_device_uninit(&voice.capture_device);
         ma_device_uninit(&voice.playback_device);
@@ -185,28 +199,34 @@ int voice_update(void) {
     }
     voice.output_len = 0;
 
+    math_vec2_print(voice.pos);
+
     const bool should_transmit = !voice.muted && voice.ptt;
     if (!should_transmit) {
         return 0;
     }
 
-    const uint32_t write = __atomic_load_n(&voice.capture_write, __ATOMIC_ACQUIRE);
+    const uint32_t write =
+        __atomic_load_n(&voice.capture_write, __ATOMIC_ACQUIRE);
 
     // the thread falls behind
     if (write - voice.capture_read > CAPTURE_RING) {
         voice.capture_read = write - FRAME_SIZE;
     }
 
-    while (write - voice.capture_read >= (uint32_t) FRAME_SIZE && voice.output_len < OUT_PACKETS) {
+    while (write - voice.capture_read >= (uint32_t)FRAME_SIZE &&
+           voice.output_len < OUT_PACKETS) {
         int16_t frame[FRAME_SIZE];
 
         for (int i = 0; i < FRAME_SIZE; i++) {
-            frame[i] = voice.capture_ring[(voice.capture_read + i) % CAPTURE_RING];
+            frame[i] =
+                voice.capture_ring[(voice.capture_read + i) % CAPTURE_RING];
         }
 
         voice.capture_read += FRAME_SIZE;
 
-        const int n = opus_encode(voice.opus_encoder, frame, FRAME_SIZE, voice.output_data[voice.output_len], PACKET);
+        const int n = opus_encode(voice.opus_encoder, frame, FRAME_SIZE,
+                                  voice.output_data[voice.output_len], PACKET);
         if (n > 0) {
             voice.output_lens[voice.output_len] = n;
             voice.output_len++;
@@ -215,14 +235,16 @@ int voice_update(void) {
 
     if (voice.client) {
         for (int i = 0; i < voice.output_len; i++) {
-            net_client_send_voice(voice.client, voice.output_data[i], (uint32_t) voice.output_lens[i]);
+            net_client_send_voice(voice.client, voice.output_data[i],
+                                  (uint32_t)voice.output_lens[i], voice.pos);
         }
     }
 
     return voice.output_len;
 }
 
-void voice_receive(const uint32_t peer_id, const uint8_t *data, const int len) {
+void voice_receive(const uint32_t peer_id, const uint8_t *data, const int len,
+                   struct vec2 pos) {
     if (!voice.alive || peer_id >= PEERS || len <= 0) {
         return;
     }
@@ -247,15 +269,18 @@ void voice_receive(const uint32_t peer_id, const uint8_t *data, const int len) {
     }
 
     int16_t decoded[FRAME_SIZE];
-    const int samples = opus_decode(peer->opus_decoder, data, len, decoded, FRAME_SIZE, 0);
+    const int samples =
+        opus_decode(peer->opus_decoder, data, len, decoded, FRAME_SIZE, 0);
     if (samples <= 0) {
         return;
     }
 
     uint32_t write = __atomic_load_n(&peer->buffer_write, __ATOMIC_RELAXED);
 
+    float distance = math_vec2_distance(voice.pos, pos);
+
     for (int i = 0; i < samples; i++) {
-        peer->buffer[write % PLAYBACK_RING] = decoded[i];
+        peer->buffer[write % PLAYBACK_RING] = decoded[i] * (1 / distance);
         write++;
     }
 
@@ -276,62 +301,42 @@ void voice_peer_remove(uint32_t peer_id) {
     }
 }
 
+void voice_set_muted(bool muted) { voice.muted = muted; }
 
-void voice_set_muted(bool muted) {
-    voice.muted = muted;
-}
+void voice_set_volume(float volume) { voice.volume = volume; }
 
-void voice_set_volume(float volume) {
-    voice.volume = volume;
-}
+void voice_set_ptt_active(bool active) { voice.ptt = active; }
 
-void voice_set_ptt_active(bool active) {
-    voice.ptt = active;
-}
+void voice_set_client(struct net_client *client) { voice.client = client; }
 
-void voice_set_client(struct net_client *client) {
-    voice.client = client;
-}
-
+void voice_set_pos(struct vec2 pos) { voice.pos = pos; }
 
 #else
 
-int voice_init(void) {
-    return 0;
+int voice_init(void) { return 0; }
+
+void voice_quit(void) {}
+
+int voice_update(void) { return 0; }
+
+void voice_receive(uint32_t peer_id, const uint8_t *data, int len,
+                   struct vec2 pos) {
+    (void)peer_id;
+    (void)data;
+    (void)len;
+    (void)pos;
 }
 
-void voice_quit(void) {
-}
+void voice_peer_remove(uint32_t peer_id) { (void)peer_id; }
 
-int voice_update(void) {
-    return 0;
-}
+void voice_set_muted(bool muted) { (void)muted; }
 
-void voice_receive(uint32_t peer_id, const uint8_t *data, int len) {
-    (void) peer_id;
-    (void) data;
-    (void) len;
-}
+void voice_set_volume(float volume) { (void)volume; }
 
-void voice_peer_remove(uint32_t peer_id) {
-    (void) peer_id;
-}
+void voice_set_ptt_active(bool active) { (void)active; }
 
-void voice_set_muted(bool muted) {
-    (void) muted;
-}
+void voice_set_client(struct net_client *client) { (void)client; }
 
-void voice_set_volume(float volume) {
-    (void) volume;
-}
-
-void voice_set_ptt_active(bool active) {
-    (void) active;
-}
-
-void voice_set_client(struct net_client *client) {
-    (void) client;
-}
-
+void voice_set_pos(struct vec2 pos) { (void)pos; }
 
 #endif

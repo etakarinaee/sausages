@@ -4,8 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "cmath.h"
+
 #define NET_TIMEOUT 10.0
-// this is the same idea as a header, used to ignore any packages that do not belong to the game
+// this is the same idea as a header, used to ignore any packages that do not
+// belong to the game
 #define NET_PROTOCOL_ID 0x696969Eu
 // maximum payload size
 #define NET_PAYLOAD 1400
@@ -69,9 +72,11 @@ void net_server_destroy(struct net_server *server);
 
 uint32_t net_server_poll(struct net_server *server, struct net_event *event);
 
-void net_server_send(const struct net_server *server, uint32_t client_id, const void *data, uint32_t len);
+void net_server_send(const struct net_server *server, uint32_t client_id,
+                     const void *data, uint32_t len);
 
-void net_server_broadcast(const struct net_server *server, const void *data, uint32_t len);
+void net_server_broadcast(const struct net_server *server, const void *data,
+                          uint32_t len);
 
 struct net_client *net_client_create(const char *host, uint16_t port);
 
@@ -81,12 +86,15 @@ void net_client_destroy(struct net_client *client);
 
 uint32_t net_client_poll(struct net_client *client, struct net_event *event);
 
-void net_client_send(const struct net_client *client, const void *data, uint32_t len);
+void net_client_send(const struct net_client *client, const void *data,
+                     uint32_t len);
 
-typedef void (*net_voice_recv_fn)(uint32_t peer_id, const uint8_t *data, int len);
+typedef void (*net_voice_recv_fn)(uint32_t peer_id, const uint8_t *data,
+                                  int len, struct vec2 pos);
 
 void net_set_voice_callback(net_voice_recv_fn callback);
 
-void net_client_send_voice(const struct net_client *client, const void *data, uint32_t len);
+void net_client_send_voice(const struct net_client *client, const void *data,
+                           uint32_t len, struct vec2 pos);
 
 #endif /* NET_H */

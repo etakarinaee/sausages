@@ -132,6 +132,8 @@ function game_update(delta_time)
     if not local_player then
         return
     end
+    
+    core.voice.set_pos({local_player.x, local_player.y})
 
     accumulator = accumulator + delta_time
     if accumulator > 0.2 then accumulator = 0.2 end

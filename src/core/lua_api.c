@@ -10,12 +10,12 @@
 #include <GLFW/glfw3.h> /* after renderer because renderer includes glad which muss be included after glfw */
 
 #include "archive.h"
-#include "local.h"
-#include "net.h"
 #include "cmath.h"
-#include "ui.h"
 #include "collision.h"
 #include "input.h"
+#include "local.h"
+#include "net.h"
+#include "ui.h"
 #include "voice.h"
 
 // metatables
@@ -46,7 +46,7 @@ static int l_read_stdin(lua_State *L) {
         return 0;
     }
 
-    lua_pushlstring(L, buf, (size_t) n);
+    lua_pushlstring(L, buf, (size_t)n);
     return 1;
 }
 
@@ -55,11 +55,11 @@ static struct vec2 check_vec2(lua_State *L, const int idx) {
     luaL_checktype(L, idx, LUA_TTABLE);
 
     lua_rawgeti(L, idx, 1);
-    v.x = (float) luaL_checknumber(L, -1);
+    v.x = (float)luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     lua_rawgeti(L, idx, 2);
-    v.y = (float) luaL_checknumber(L, -1);
+    v.y = (float)luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     return v;
@@ -70,11 +70,11 @@ static struct vec2i check_vec2i(lua_State *L, const int idx) {
     luaL_checktype(L, idx, LUA_TTABLE);
 
     lua_rawgeti(L, idx, 1);
-    v.x = (float) luaL_checkint(L, -1);
+    v.x = (float)luaL_checkint(L, -1);
     lua_pop(L, 1);
 
     lua_rawgeti(L, idx, 2);
-    v.y = (float) luaL_checkint(L, -1);
+    v.y = (float)luaL_checkint(L, -1);
     lua_pop(L, 1);
 
     return v;
@@ -85,22 +85,22 @@ static struct color3 check_color3(lua_State *L, const int idx) {
     luaL_checktype(L, idx, LUA_TTABLE);
 
     lua_rawgeti(L, idx, 1);
-    c.r = (float) luaL_checknumber(L, -1);
+    c.r = (float)luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     lua_rawgeti(L, idx, 2);
-    c.g = (float) luaL_checknumber(L, -1);
+    c.g = (float)luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     lua_rawgeti(L, idx, 3);
-    c.b = (float) luaL_checknumber(L, -1);
+    c.b = (float)luaL_checknumber(L, -1);
     lua_pop(L, 1);
 
     return c;
 }
 
 static int l_quit(lua_State *L) {
-    (void) L;
+    (void)L;
     exit(0);
 }
 
@@ -155,7 +155,8 @@ static int l_push_texture(lua_State *L) {
     const struct vec2 scale = check_vec2(L, 2);
     const texture_id tex = luaL_checkint(L, 3);
 
-    renderer_push_texture(&render_context, pos, scale, 0.0f, tex, ANCHOR_CENTER);
+    renderer_push_texture(&render_context, pos, scale, 0.0f, tex,
+                          ANCHOR_CENTER);
 
     return 0;
 }
@@ -179,7 +180,8 @@ static int l_push_text(lua_State *L) {
     float scale = luaL_checknumber(L, 4);
     const struct color3 color = check_color3(L, 5);
 
-    renderer_push_text(&render_context, pos, scale, color, font, text, ANCHOR_BOTTOM_LEFT);
+    renderer_push_text(&render_context, pos, scale, color, font, text,
+                       ANCHOR_BOTTOM_LEFT);
 
     return 0;
 }
@@ -208,7 +210,8 @@ static int l_load_font(lua_State *L) {
     const int font_size = luaL_checkint(L, 2);
     const struct vec2i range = check_vec2i(L, 3);
 
-    const font_id font = renderer_load_font(&render_context, text, font_size, range);
+    const font_id font =
+        renderer_load_font(&render_context, text, font_size, range);
     lua_pushinteger(L, font);
     return 1;
 }
@@ -254,7 +257,7 @@ static int l_screen_to_world(lua_State *L) {
 static int l_check_point_circle(lua_State *L) {
     const struct vec2 p = check_vec2(L, 1);
     const struct vec2 center = check_vec2(L, 2);
-    const float radius = (float) luaL_checknumber(L, 3);
+    const float radius = (float)luaL_checknumber(L, 3);
 
     bool in = coll_check_point_circle(p, center, radius);
     if (in) {
@@ -388,12 +391,10 @@ static int push_event(lua_State *L, const struct net_event *event) {
     lua_pushinteger(L, event->client_id);
     lua_setfield(L, -2, "id");
 
-
     if (event->type == NET_EVENT_DATA && event->len > 0) {
-        lua_pushlstring(L, (const char *) event->data, event->len);
+        lua_pushlstring(L, (const char *)event->data, event->len);
         lua_setfield(L, -2, "data");
     }
-
 
     return 1;
 }
@@ -402,8 +403,8 @@ static int push_event(lua_State *L, const struct net_event *event) {
 
 static int l_server_new(lua_State *L) {
     const char *ip = luaL_checkstring(L, 1);
-    const uint16_t port = (uint16_t) luaL_checkint(L, 2);
-    const uint32_t n = (uint32_t) luaL_optint(L, 3, 32);
+    const uint16_t port = (uint16_t)luaL_checkint(L, 2);
+    const uint32_t n = (uint32_t)luaL_optint(L, 3, 32);
 
     struct net_server *server = net_server_create(ip, port, n);
     if (!server) {
@@ -444,12 +445,12 @@ static int l_server_close(lua_State *L) {
 
 static int l_server_send(lua_State *L) {
     struct net_server **sp = luaL_checkudata(L, 1, SERVER_MT);
-    const uint32_t client_id = (uint32_t) luaL_checkint(L, 2);
+    const uint32_t client_id = (uint32_t)luaL_checkint(L, 2);
     size_t len;
     const char *data = luaL_checklstring(L, 3, &len);
 
     if (*sp) {
-        net_server_send(*sp, client_id, data, (uint32_t) len);
+        net_server_send(*sp, client_id, data, (uint32_t)len);
     }
 
     return 0;
@@ -461,26 +462,23 @@ static int l_server_broadcast(lua_State *L) {
     const char *data = luaL_checklstring(L, 2, &len);
 
     if (*sp) {
-        net_server_broadcast(*sp, data, (uint32_t) len);
+        net_server_broadcast(*sp, data, (uint32_t)len);
     }
 
     return 0;
 }
 
 static const luaL_Reg server_methods[] = {
-    {"poll", l_server_poll},
-    {"send", l_server_send},
-    {"broadcast", l_server_broadcast},
-    {"close", l_server_close},
-    {"__gc", l_server_close},
-    {NULL,NULL},
+    {"poll", l_server_poll},           {"send", l_server_send},
+    {"broadcast", l_server_broadcast}, {"close", l_server_close},
+    {"__gc", l_server_close},          {NULL, NULL},
 };
 
 // client
 
 static int l_client_new(lua_State *L) {
     const char *host = luaL_checkstring(L, 1);
-    const uint16_t port = (uint16_t) luaL_checkint(L, 2);
+    const uint16_t port = (uint16_t)luaL_checkint(L, 2);
 
     struct net_client *c = net_client_create(host, port);
 
@@ -535,20 +533,16 @@ static int l_client_send(lua_State *L) {
     const char *data = luaL_checklstring(L, 2, &len);
 
     if (*cp && (*cp)->connected) {
-        net_client_send(*cp, data, (uint32_t) len);
+        net_client_send(*cp, data, (uint32_t)len);
     }
 
     return 0;
 }
 
 static const luaL_Reg client_methods[] = {
-    {"poll", l_client_poll},
-    {"send", l_client_send},
-    {"connected", l_client_connected},
-    {"close", l_client_close},
-    {"__gc", l_client_close},
-    {NULL, NULL}
-};
+    {"poll", l_client_poll},           {"send", l_client_send},
+    {"connected", l_client_connected}, {"close", l_client_close},
+    {"__gc", l_client_close},          {NULL, NULL}};
 
 static void meta(lua_State *L, const char *name, const luaL_Reg *methods) {
     luaL_newmetatable(L, name);
@@ -594,7 +588,7 @@ static int l_local_current_locale(lua_State *L) {
 ////////////////
 
 static int l_voice_init(lua_State *L) {
-    (void) L;
+    (void)L;
     if (voice_init() != 0)
         return luaL_error(L, "core.voice.init: failed to initialize");
     return 0;
@@ -606,12 +600,18 @@ static int l_voice_mute(lua_State *L) {
 }
 
 static int l_voice_volume(lua_State *L) {
-    voice_set_volume((float) luaL_checknumber(L, 1));
+    voice_set_volume((float)luaL_checknumber(L, 1));
     return 0;
 }
 
 static int l_voice_transmit(lua_State *L) {
     voice_set_ptt_active(lua_toboolean(L, 1));
+    return 0;
+}
+
+static int l_voice_set_pos(lua_State *L) {
+    const struct vec2 pos = check_vec2(L, 1);
+    voice_set_pos(pos);
     return 0;
 }
 
@@ -667,19 +667,19 @@ static void keys_init(lua_State *L) {
 
     for (i = GLFW_KEY_A; i <= GLFW_KEY_Z; i++) {
         lua_pushinteger(L, i);
-        key[0] = (char) (i - GLFW_KEY_A + 'a');
+        key[0] = (char)(i - GLFW_KEY_A + 'a');
         lua_setfield(L, -2, key);
     }
 
     for (i = GLFW_KEY_A; i <= GLFW_KEY_Z; i++) {
         lua_pushinteger(L, i);
-        key[0] = (char) (i - GLFW_KEY_A + 'A');
+        key[0] = (char)(i - GLFW_KEY_A + 'A');
         lua_setfield(L, -2, key);
     }
 
     for (i = GLFW_KEY_0; i <= GLFW_KEY_9; i++) {
         lua_pushinteger(L, i);
-        key[0] = (char) (i - GLFW_KEY_0 + '0');
+        key[0] = (char)(i - GLFW_KEY_0 + '0');
         lua_setfield(L, -2, key);
     }
 
@@ -752,14 +752,8 @@ static void keys_init(lua_State *L) {
 }
 
 static const char *mouse_names[] = {
-    "left",
-    "right",
-    "middle",
-    "button_4",
-    "button_5",
-    "button_6",
-    "button_7",
-    "button_8",
+    "left",     "right",    "middle",   "button_4",
+    "button_5", "button_6", "button_7", "button_8",
 };
 
 static void mouse_init(lua_State *L) {
@@ -802,7 +796,7 @@ static void loader_init(lua_State *L) {
     lua_getfield(L, -1, "loaders");
 
     // insert it at index 2 which is after preload
-    int n = (int) lua_objlen(L, -1);
+    int n = (int)lua_objlen(L, -1);
     for (int i = n; i >= 2; i--) {
         lua_rawgeti(L, -1, i);
         lua_rawseti(L, -2, i + 1);
@@ -866,6 +860,8 @@ void lua_api_init(lua_State *L) {
     lua_setfield(L, -2, "volume");
     lua_pushcfunction(L, l_voice_transmit);
     lua_setfield(L, -2, "transmit");
+    lua_pushcfunction(L, l_voice_set_pos);
+    lua_setfield(L, -2, "set_pos");
     lua_setfield(L, -2, "voice");
 
     lua_setglobal(L, "core");
