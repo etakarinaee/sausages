@@ -16,7 +16,6 @@
 #include "input.h"
 #include "local.h"
 #include "net.h"
-#include "softbody.h"
 #include "ui.h"
 #include "voice.h"
 
@@ -296,111 +295,6 @@ static int l_load_font(lua_State *L) {
         renderer_load_font(&render_context, text, font_size, range);
     lua_pushinteger(L, font);
     return 1;
-}
-
-// softbody
-static int l_create_softbody(lua_State *L) {
-    const struct vec2 pos = check_vec2(L, 1);
-    const struct vec2 size = check_vec2(L, 2);
-    const struct color3 color = check_color3(L, 3);
-    const int type = luaL_checkinteger(L, 4);
-
-    int handle = game_context.soft_bodies_index;
-    game_context.soft_bodies[game_context.soft_bodies_index++] =
-        softbody_create_rect(pos, size, color, type);
-    lua_pushinteger(L, handle);
-    return 1;
-}
-
-static int l_update_softbody(lua_State *L) {
-    const int handle = luaL_checkinteger(L, 1);
-    const float dt = luaL_checknumber(L, 2);
-    const struct color3 color = check_color3(L, 3);
-
-    softbody_update(&game_context.soft_bodies[handle], dt, color);
-
-    return 0;
-}
-
-static int l_softbody_apply_velocity(lua_State *L) {
-    const int handle = luaL_checkinteger(L, 1);
-    const struct vec2 vel = check_vec2(L, 2);
-
-    softbody_apply_velocity(&game_context.soft_bodies[handle], vel);
-
-    return 0;
-}
-
-static int l_softbody_apply_force(lua_State *L) {
-    const int handle = luaL_checkinteger(L, 1);
-    const struct vec2 force = check_vec2(L, 2);
-
-    softbody_apply_force(&game_context.soft_bodies[handle], force);
-
-    return 0;
-}
-
-static int l_softbody_check_coll(lua_State *L) {
-    luaL_checktype(L, 1, LUA_TTABLE);
-    size_t len = lua_objlen(L, 1);
-
-    int handles[len];
-    for (size_t i = 0; i < len; i++) {
-        lua_rawgeti(L, 1, i + 1);
-        handles[i] = luaL_checkinteger(L, -1);
-        lua_pop(L, 1);
-    }
-
-    for (size_t i = 0; i < len; i++) {
-        int a = handles[i];
-        for (size_t j = 0; j < len; j++) {
-            if (i == j)
-                continue;
-            int b = handles[j];
-            softbody_check_coll(&game_context.soft_bodies[a],
-                                &game_context.soft_bodies[b]);
-        }
-    }
-
-    return 0;
-}
-
-static int l_draw_softbody(lua_State *L) {
-    const int handle = luaL_checknumber(L, 1);
-
-    softbody_draw(&game_context.soft_bodies[handle]);
-
-    return 0;
-}
-
-static int l_destroy_softbody(lua_State *L) {
-    const int handle = luaL_checknumber(L, 1);
-
-    softbody_destroy(&game_context.soft_bodies[handle]);
-
-    return 0;
-}
-
-static int l_softbody_get_pos(lua_State *L) {
-    const int handle = luaL_checknumber(L, 1);
-    struct vec2 pos = softbody_get_pos(&game_context.soft_bodies[handle]);
-
-    lua_newtable(L);
-    lua_pushinteger(L, pos.x);
-    lua_setfield(L, -2, "x");
-
-    lua_pushinteger(L, pos.y);
-    lua_setfield(L, -2, "y");
-
-    return 1;
-}
-
-static int l_softbody_set_pos(lua_State *L) {
-    const int handle = luaL_checknumber(L, 1);
-    struct vec2 pos = check_vec2(L, 2);
-    softbody_set_pos(&game_context.soft_bodies[handle], pos);
-
-    return 0;
 }
 
 ////////////////
@@ -815,15 +709,6 @@ static const luaL_Reg api[] = {
     {"update_mesh", l_update_mesh},
     {"load_texture", l_load_texture},
     {"load_font", l_load_font},
-    {"create_softbody", l_create_softbody},
-    {"update_softbody", l_update_softbody},
-    {"softbody_check_coll", l_softbody_check_coll},
-    {"softbody_apply_velocity", l_softbody_apply_velocity},
-    {"softbody_apply_force", l_softbody_apply_force},
-    {"draw_softbody", l_draw_softbody},
-    {"destroy_softbody", l_destroy_softbody},
-    {"softbody_get_pos", l_softbody_get_pos},
-    {"softbody_set_pos", l_softbody_set_pos},
     {"get_screen_dimensions", l_get_screen_dimensions},
 
     /* ui */

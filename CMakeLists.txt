@@ -63,7 +63,6 @@ set(CORE_SOURCES
         src/core/ui.c
         src/core/input.c
         src/core/voice.c
-        src/core/softbody.c
         src/core/game.c
 )
 

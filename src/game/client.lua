@@ -56,13 +56,9 @@ local function deserialize_message(data)
 end
 
 local image = core.load_texture("../test.png")
+font = core.load_font("../AdwaitaSans-Regular.ttf", 38, {32, 128})
 
-local font = core.load_font("../AdwaitaSans-Regular.ttf", 38, {32, 128})
 local_nickname = os.getenv("SAUSAGES_NICKNAME") or "Player"
-
-local softbody = 0
-local softbody_two = 0;
-local softbody_ground = 0;
 
 function game_init()
     local ip = os.getenv("SAUSAGES_IP") or "127.0.0.1"
@@ -73,10 +69,6 @@ function game_init()
 
     client = core.client.new(ip, port)
     core.print("connecting to " .. ip .. ":" .. port)
-
-    softbody = core.create_softbody({310, 400}, {10, 10}, {0.8, 0.3, 0.0}, 0)
-    softbody_two = core.create_softbody({-100, 400}, {5, 10}, {0.1, 0.0, 1.0}, 0)
-    softbody_ground = core.create_softbody({0, 0}, {30, 4}, {0.3, 0.7, 0.3}, 1)
 end
 
 local tick_rate = 1.0 / 120.0
@@ -85,13 +77,6 @@ local accumulator = 0.0
 function game_update(delta_time)
     core.voice.transmit(core.key_down(key.v))
     chat.update()
-
-    core.softbody_apply_force(softbody, {0, -1200})
-    core.softbody_apply_force(softbody_two, {0, -1200})
-    core.update_softbody(softbody, delta_time, {0.8, 0.3, 0.0})
-    core.update_softbody(softbody_two, delta_time, {0.1, 0.0, 1.0})
-    core.update_softbody(softbody_ground, delta_time, {0.3, 0.7, 0.3}) 
-    core.softbody_check_coll({softbody, softbody_two, softbody_ground})
 
     local msg = chat.poll_outgoing()
     while msg do
@@ -154,25 +139,14 @@ function game_update(delta_time)
     while accumulator >= tick_rate do
         accumulator = accumulator - tick_rate
 
-        if core.mouse_down(mouse.left) then
-            pos = core.mouse_position()
-            pos_world = core.screen_to_world({pos.x, pos.y})
-            core.softbody_set_pos(softbody_two, pos_world)
-        end
-
         if not chat.is_active() then
             if core.key_down(key.a) then
                 local_player.vx = local_player.vx - speed * tick_rate
-                core.softbody_apply_force(softbody_two, {-speed * 90 * tick_rate, 0})
             end
             if core.key_down(key.d) then
                 local_player.vx = local_player.vx + speed * tick_rate
-                core.softbody_apply_force(softbody_two, {speed * 90 * tick_rate, 0})
             end
-            if core.key_just_down(key.space) then
-                core.softbody_apply_velocity(softbody_two, {0, 900})
-            end 
-        end
+         end
 
         local_player.vy = local_player.vy + gravity * tick_rate
 
@@ -195,18 +169,12 @@ function game_update(delta_time)
 
     client:send(serialize_position(local_player))
 
-    --core.push_rect({platform.x, platform.y}, {platform.w, platform.h}, {0.3, 0.7, 0.3})
+    core.push_text(font, "Test", {300, 300}, 18, {1.0, 1.0, 1.0})
+    core.push_rect({platform.x, platform.y}, {platform.w, platform.h}, {0.3, 0.7, 0.3})
     for id, player in pairs(players) do
         core.push_texture({player.x, player.y}, {player_w, player_h}, image)
         core.push_text_ex(font, player.nickname, {player.x, player.y + 10}, 25, {1.0, 1.0, 1.0}, core.anchor.center)
     end
-
-    core.draw_softbody(softbody)
-    core.draw_softbody(softbody_two)
-    core.draw_softbody(softbody_ground)
-
-    local pos = core.softbody_get_pos(softbody_two)
-    core.push_circle({pos.x, pos.y}, 15, {1.0, 1.0, 1.0})
 
     if core.button(font, "button", {0, 0}, {300, 100}) then
         core.print("YOO")
