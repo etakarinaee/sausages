@@ -171,7 +171,6 @@ function game_update(delta_time)
 
     client:send(serialize_position(local_player))
 
-    core.push_text(font, "Test", {300, 300}, 18, {1.0, 1.0, 1.0})
     core.push_rect({platform.x, platform.y}, {platform.w, platform.h}, {0.3, 0.7, 0.3})
     for id, player in pairs(players) do
         core.push_texture({player.x, player.y}, {player_w, player_h}, image)

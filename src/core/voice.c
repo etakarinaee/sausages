@@ -199,8 +199,6 @@ int voice_update(void) {
     }
     voice.output_len = 0;
 
-    math_vec2_print(voice.pos);
-
     const bool should_transmit = !voice.muted && voice.ptt;
     if (!should_transmit) {
         return 0;
@@ -279,8 +277,25 @@ void voice_receive(const uint32_t peer_id, const uint8_t *data, const int len,
 
     float distance = math_vec2_distance(voice.pos, pos);
 
+    float min_distance = 1.0f;
+    float max_distance = 50.0f;
+
+    float gain;
+    if (distance <= min_distance) {
+        gain = 1.0f;
+    } else if (distance >= max_distance) {
+        gain = 0.0f;
+    } else {
+        gain = min_distance / distance;
+    }
+
     for (int i = 0; i < samples; i++) {
-        peer->buffer[write % PLAYBACK_RING] = decoded[i] * (1 / distance);
+        int32_t sample = (int32_t)(decoded[i] * gain);
+        if (sample > 32767)
+            sample = 32767;
+        if (sample < -32768)
+            sample = -32768;
+        peer->buffer[write % PLAYBACK_RING] = (int16_t)sample;
         write++;
     }
 
