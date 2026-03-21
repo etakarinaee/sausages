@@ -286,7 +286,7 @@ void voice_receive(const uint32_t peer_id, const uint8_t *data, const int len,
     } else if (distance >= max_distance) {
         gain = 0.0f;
     } else {
-        gain = min_distance / distance;
+        gain = 1.0f - (distance - min_distance) / (max_distance - min_distance);
     }
 
     for (int i = 0; i < samples; i++) {
