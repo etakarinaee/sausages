@@ -76,8 +76,8 @@ static void capture_callback(ma_device *device, void *output, const void *input,
 static void playback_callback(ma_device *device, void *output,
                               const void *input, const ma_uint32 n) {
     (void)device;
-    (void)input;
     (void)output;
+    (void)input;
 
     int16_t *destination = (int16_t *)output;
     memset(destination, 0, n * sizeof(int16_t));

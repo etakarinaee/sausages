@@ -10,13 +10,6 @@ struct vec2 {
     float y;
 };
 
-struct vec4 {
-    float x;
-    float y;
-    float z;
-    float w;
-};
-
 struct vec2i {
     int x;
     int y;
