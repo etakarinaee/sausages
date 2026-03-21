@@ -1,5 +1,3 @@
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +6,7 @@
 #include <luajit-2.1/lua.h>
 
 #include "archive.h"
+#include "game.h"
 #include "input.h"
 #include "lua.h"
 #include "net.h"
@@ -22,12 +21,15 @@
 
 static lua_State *L;
 
-static void resize_callback(GLFWwindow *window, const int width, const int height) {
+#ifndef SERVER
+static void resize_callback(GLFWwindow *window, const int width,
+                            const int height) {
     struct render_context *r = glfwGetWindowUserPointer(window);
     r->width = width;
     r->height = height;
     glViewport(0, 0, width, height);
 }
+#endif
 
 int main(void) {
     FILE *test = fopen(SAUSAGES_DATA, "rb");
@@ -56,10 +58,11 @@ int main(void) {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
 
-    render_context = (struct render_context){.width = width, .height = height, .window = window};
+    render_context = (struct render_context){
+        .width = width, .height = height, .window = window};
     glViewport(0, 0, width, height);
 
-    printf("OpenGL %s\n", (const char *) glGetString(GL_VERSION));
+    printf("OpenGL %s\n", (const char *)glGetString(GL_VERSION));
 
     glfwSetFramebufferSizeCallback(window, resize_callback);
     glfwSetWindowUserPointer(window, &render_context);
@@ -68,6 +71,7 @@ int main(void) {
     renderer_init(&render_context);
     input_init(&input_context, window);
     net_set_voice_callback(voice_receive);
+    game_init();
 #endif
 
     L = lua_init(SAUSAGES_DATA, ENTRY);
@@ -113,12 +117,12 @@ int main(void) {
         glfwSwapBuffers(window);
         glfwPollEvents();
 
-        // vsync is disabled because it causes some weird behavior when the window is minimized, so cap the fps
-        // to 240 to avoid burning the cpu
+        // vsync is disabled because it causes some weird behavior when the
+        // window is minimized, so cap the fps to 240 to avoid burning the cpu
         const double frame_end = glfwGetTime();
         const double elapsed = frame_end - current_time;
         if (elapsed < 1.0 / 240.0) {
-            usleep((unsigned int) ((1.0 / 240.0 - elapsed) * 1e6));
+            usleep((unsigned int)((1.0 / 240.0 - elapsed) * 1e6));
         }
     }
 #endif
@@ -129,6 +133,7 @@ int main(void) {
     glfwTerminate();
 
 #ifndef SERVER
+    game_deinit();
     voice_quit();
 #endif
 

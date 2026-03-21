@@ -17,7 +17,7 @@ bool ui_button(struct render_context *r, font_id font, const char *text, struct 
         bool clicked = coll_check_point_rect(get_mouse_pos(render_context.window), pos, math_vec2i_to_vec2(size));
         return clicked;
     }
-
+    
     return false;
 }
 

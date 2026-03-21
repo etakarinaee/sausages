@@ -3,7 +3,7 @@
 
 Debian:
 ```bash
-sudo apt install libfreetype6-dev libglfw3-dev libopus-dev luajit
+sudo apt install libfreetype6-dev libglfw3-dev libopus-dev libluajit-5.1-dev
 ```
 
 Arch:

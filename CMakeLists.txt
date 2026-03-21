@@ -21,10 +21,16 @@ set(ARCHIVE_FILE ${CMAKE_BINARY_DIR}/sausages.arc)
 set(ARC_INPUTS
         ${CMAKE_SOURCE_DIR}/src/core/shaders/quad.vert
         ${CMAKE_SOURCE_DIR}/src/core/shaders/quad.frag
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/circle.vert
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/circle.frag
         ${CMAKE_SOURCE_DIR}/src/core/shaders/texture.vert
         ${CMAKE_SOURCE_DIR}/src/core/shaders/texture.frag
         ${CMAKE_SOURCE_DIR}/src/core/shaders/text.vert
         ${CMAKE_SOURCE_DIR}/src/core/shaders/text.frag
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/mesh.vert
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/mesh.frag
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/line.vert
+        ${CMAKE_SOURCE_DIR}/src/core/shaders/line.frag
 
         ${CMAKE_SOURCE_DIR}/src/game/client.lua
         ${CMAKE_SOURCE_DIR}/src/game/server.lua
@@ -57,6 +63,7 @@ set(CORE_SOURCES
         src/core/ui.c
         src/core/input.c
         src/core/voice.c
+        src/core/game.c
 )
 
 # Freetype2
