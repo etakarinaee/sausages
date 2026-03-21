@@ -12,6 +12,7 @@
 #include "archive.h"
 #include "cmath.h"
 #include "collision.h"
+#include "game.h"
 #include "input.h"
 #include "local.h"
 #include "net.h"
@@ -150,6 +151,16 @@ static int l_push_rect_ex(lua_State *L) {
     return 0;
 }
 
+static int l_push_circle(lua_State *L) {
+    const struct vec2 pos = check_vec2(L, 1);
+    const float radius = luaL_checknumber(L, 2);
+    const struct color3 color = check_color3(L, 3);
+
+    renderer_push_circle(&render_context, pos, radius, color);
+
+    return 0;
+}
+
 static int l_push_texture(lua_State *L) {
     const struct vec2 pos = check_vec2(L, 1);
     const struct vec2 scale = check_vec2(L, 2);
@@ -195,6 +206,76 @@ static int l_push_text_ex(lua_State *L) {
     const int anchor = luaL_checkint(L, 6);
 
     renderer_push_text(&render_context, pos, scale, color, font, text, anchor);
+
+    return 0;
+}
+
+static int l_push_mesh(lua_State *L) {
+    const int handle = luaL_checkinteger(L, 1);
+    const struct vec2 pos = check_vec2(L, 2);
+    const struct vec2 scale = check_vec2(L, 3);
+
+    renderer_push_mesh(&render_context, game_context.meshs[handle], pos, scale);
+    return 0;
+}
+
+static int l_push_line(lua_State *L) {
+    const struct vec2 start = check_vec2(L, 1);
+    const struct vec2 end = check_vec2(L, 2);
+    const float width = luaL_checknumber(L, 3);
+
+    renderer_push_line(&render_context, start, end, width);
+    return 0;
+}
+
+static int l_create_mesh(lua_State *L) {
+    const int vertex_count = luaL_checkinteger(L, 1);
+    luaL_checktype(L, 2, LUA_TTABLE);
+
+    float vertices[vertex_count];
+
+    for (int i = 0; i < vertex_count; i++) {
+        lua_rawgeti(L, 2, i);
+        vertices[i] = (float)luaL_checknumber(L, -1);
+        lua_pop(L, 1);
+    }
+
+    const int indices_count = luaL_checkinteger(L, 3);
+    luaL_checktype(L, 4, LUA_TTABLE);
+
+    uint32_t indices[indices_count];
+
+    for (int i = 0; i < indices_count; i++) {
+        lua_rawgeti(L, 4, i);
+        indices[i] = luaL_checkinteger(L, 4);
+        lua_pop(L, 1);
+    }
+
+    const struct color3 color = check_color3(L, 3);
+    int handle = game_context.meshs_index;
+    game_context.meshs[game_context.meshs_index++] = renderer_create_mesh(
+        vertices, vertex_count, indices, indices_count, color);
+    lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int l_update_mesh(lua_State *L) {
+    const int handle = luaL_checkinteger(L, 1);
+    const int vertex_count = luaL_checkinteger(L, 2);
+    luaL_checktype(L, 3, LUA_TTABLE);
+
+    float vertices[vertex_count];
+
+    for (int i = 0; i < vertex_count; i++) {
+        lua_rawgeti(L, 3, 1);
+        vertices[i] = (float)luaL_checknumber(L, -1);
+        lua_pop(L, 1);
+    }
+
+    const struct color3 color = check_color3(L, 4);
+
+    renderer_update_mesh(&game_context.meshs[handle], vertices, vertex_count,
+                         color);
 
     return 0;
 }
@@ -622,11 +703,16 @@ static const luaL_Reg api[] = {
     /* Render */
     {"push_rect", l_push_rect},
     {"push_rect_ex", l_push_rect_ex},
+    {"push_circle", l_push_circle},
     {"push_texture", l_push_texture},
     {"push_texture_ex", l_push_texture_ex},
     {"push_text", l_push_text},
     {"push_text_ex", l_push_text_ex},
+    {"push_mesh", l_push_mesh},
+    {"push_line", l_push_line},
 
+    {"create_mesh", l_create_mesh},
+    {"update_mesh", l_update_mesh},
     {"load_texture", l_load_texture},
     {"load_font", l_load_font},
     {"get_screen_dimensions", l_get_screen_dimensions},

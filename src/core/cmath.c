@@ -3,6 +3,15 @@
 #include "renderer.h"
 
 #include <math.h>
+#include <stdio.h>
+
+float math_clamp(float n, float lower, float upper) {
+    if (n < lower)
+        return lower;
+    if (n > upper)
+        return upper;
+    return n;
+}
 
 struct vec2 math_vec2_add(struct vec2 a, struct vec2 b) {
     return (struct vec2){a.x + b.x, a.y + b.y};
@@ -16,7 +25,29 @@ struct vec2 math_vec2_scale(struct vec2 v, float scalar) {
     return (struct vec2){v.x * scalar, v.y * scalar};
 }
 
+struct vec2 math_vec2_rotate(struct vec2 v, float angle) {
+    float c = cosf(angle);
+    float s = sinf(angle);
+    return (struct vec2){
+        .x = v.x * c - v.y * s,
+        .y = v.x * s + v.y * c,
+    };
+}
+
 float math_vec2_length(struct vec2 v) { return sqrtf(v.x * v.x + v.y * v.y); }
+
+struct vec2 math_vec2_norm(struct vec2 v) {
+    float len = math_vec2_length(v);
+
+    if (len == 0.0f) { /* if that even works with float precision */
+        return (struct vec2){0, 0};
+    }
+
+    return (struct vec2){
+        .x = v.x / len,
+        .y = v.y / len,
+    };
+}
 
 float math_vec2_distance(struct vec2 a, struct vec2 b) {
     struct vec2 delta = math_vec2_subtract(a, b);
@@ -28,11 +59,28 @@ float math_vec2_dot(struct vec2 a, struct vec2 b) {
 }
 
 float math_vec2_angle_cos(struct vec2 a, struct vec2 b) {
-    return math_vec2_dot(a, b) / math_vec2_length(a) * math_vec2_length(b);
+    return math_vec2_dot(a, b) / (math_vec2_length(a) * math_vec2_length(b));
 }
 
 float math_vec2_angle(struct vec2 a, struct vec2 b) {
     return acosf(math_vec2_angle_cos(a, b));
+}
+
+struct vec2 math_vec2_mul_matrix(struct vec2 vec, struct matrix *m) {
+
+    struct vec4 v = (struct vec4){
+        vec.x,
+        vec.y,
+        0.0f,
+        0.0f,
+    };
+
+    struct vec2 r;
+
+    r.x = m->m[0] * v.x + m->m[4] * v.y + m->m[8] * v.z + m->m[12] * v.w;
+    r.y = m->m[1] * v.x + m->m[5] * v.y + m->m[9] * v.z + m->m[13] * v.w;
+
+    return r;
 }
 
 struct vec2i math_vec2_to_vec2i(struct vec2 v) {

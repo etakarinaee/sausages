@@ -10,6 +10,13 @@ struct vec2 {
     float y;
 };
 
+struct vec4 {
+    float x;
+    float y;
+    float z;
+    float w;
+};
+
 struct vec2i {
     int x;
     int y;
@@ -28,17 +35,22 @@ struct matrix {
 
 struct render_context;
 
+float math_clamp(float n, float lower, float upper);
+
 struct vec2 math_vec2_add(struct vec2 a, struct vec2 b);
 struct vec2 math_vec2_subtract(struct vec2 a, struct vec2 b);
 struct vec2 math_vec2_scale(struct vec2 v, float scalar);
+struct vec2 math_vec2_rotate(struct vec2 v, float angle);
 
 float math_vec2_length(struct vec2 v);
+struct vec2 math_vec2_norm(struct vec2 v);
 float math_vec2_distance(struct vec2 a, struct vec2 b);
 float math_vec2_dot(struct vec2 a, struct vec2 b);
 float math_vec2_angle_cos(struct vec2 a, struct vec2 b);
 
 /* Angle in degrees */
 float math_vec2_angle(struct vec2 a, struct vec2 b);
+struct vec2 math_vec2_mul_matrix(struct vec2 v, struct matrix *m);
 
 struct vec2i math_vec2_to_vec2i(struct vec2 v);
 struct vec2 math_vec2i_to_vec2(struct vec2i v);

@@ -6,7 +6,7 @@ local chat = require('chat')
 local local_id = nil
 local players = {}
 
-local platform = { x = 0.0, y = -0.5, w = 800, h = 100 }
+local platform = { x = 0.0, y = 0.0, w = 800, h = 100 }
 
 local gravity = -300.0
 local friction = 0.88
@@ -56,8 +56,8 @@ local function deserialize_message(data)
 end
 
 local image = core.load_texture("../test.png")
+font = core.load_font("../AdwaitaSans-Regular.ttf", 38, {32, 128})
 
-font = core.load_font("../AdwaitaSans-Regular.ttf", 48, {32, 128})
 local_nickname = os.getenv("SAUSAGES_NICKNAME") or "Player"
 
 function game_init()
@@ -148,7 +148,7 @@ function game_update(delta_time)
             if core.key_down(key.d) then
                 local_player.vx = local_player.vx + speed * tick_rate
             end
-        end
+         end
 
         local_player.vy = local_player.vy + gravity * tick_rate
 
@@ -171,6 +171,7 @@ function game_update(delta_time)
 
     client:send(serialize_position(local_player))
 
+    core.push_text(font, "Test", {300, 300}, 18, {1.0, 1.0, 1.0})
     core.push_rect({platform.x, platform.y}, {platform.w, platform.h}, {0.3, 0.7, 0.3})
     for id, player in pairs(players) do
         core.push_texture({player.x, player.y}, {player_w, player_h}, image)
